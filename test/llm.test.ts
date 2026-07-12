@@ -1,26 +1,20 @@
-import { afterEach, beforeEach, describe, it, mock } from "node:test";
+import { mock } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { chat, chatJson, SKILLS } from "../src/llm.js";
+import { chat, chatJson, SKILLS } from "../src/llm.ts";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+function mockFetch(fn: () => unknown): typeof fetch {
+  return mock.fn(fn) as unknown as typeof fetch;
+}
 
-describe("chat", () => {
+Deno.test("chat sends correct request and returns content", async () => {
   const originalFetch = globalThis.fetch;
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
-
-  it("sends correct request and returns content", async () => {
-    globalThis.fetch = mock.fn(async () => ({
+  try {
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [{ message: { content: "hello world" } }],
       }),
-    })) as typeof fetch;
+    }));
 
     const result = await chat(
       { url: "http://localhost:1234", model: "test" },
@@ -29,25 +23,32 @@ describe("chat", () => {
     );
 
     assert.equal(result, "hello world");
-    assert.equal(globalThis.fetch.mock.callCount(), 1);
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof mock.fn>;
+    assert.equal(fetchMock.mock.callCount(), 1);
 
-    const [url, opts] = globalThis.fetch.mock.calls[0].arguments;
-    assert.equal(url, "http://localhost:1234/v1/chat/completions");
-    assert.equal(opts.method, "POST");
+    const args = fetchMock.mock.calls[0].arguments as [unknown, unknown];
+    assert.equal(args[0], "http://localhost:1234/v1/chat/completions");
+    const reqOpts = args[1] as { method: string; body: string };
+    assert.equal(reqOpts.method, "POST");
 
-    const body = JSON.parse(opts.body);
+    const body = JSON.parse(reqOpts.body);
     assert.equal(body.model, "test");
     assert.equal(body.messages.length, 2);
     assert.equal(body.messages[0].role, "system");
     assert.equal(body.messages[1].role, "user");
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("throws on non-ok response", async () => {
-    globalThis.fetch = mock.fn(async () => ({
+Deno.test("chat throws on non-ok response", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = mockFetch(() => ({
       ok: false,
       status: 500,
-      text: async () => "server error",
-    })) as typeof fetch;
+      text: () => "server error",
+    }));
 
     await assert.rejects(
       () =>
@@ -58,23 +59,20 @@ describe("chat", () => {
         ),
       { message: /LLM request failed \(500\)/ },
     );
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
-describe("chatJson", () => {
+Deno.test("chatJson parses JSON from raw response", async () => {
   const originalFetch = globalThis.fetch;
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
-
-  it("parses JSON from raw response", async () => {
-    globalThis.fetch = mock.fn(async () => ({
+  try {
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [{ message: { content: '{"key": "value"}' } }],
       }),
-    })) as typeof fetch;
+    }));
 
     const result = await chatJson<{ key: string }>(
       { url: "http://localhost:1234", model: "test" },
@@ -83,16 +81,21 @@ describe("chatJson", () => {
     );
 
     assert.deepEqual(result, { key: "value" });
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("parses JSON from markdown code fence", async () => {
+Deno.test("chatJson parses JSON from markdown code fence", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
     const fenced = '```json\n{"key": "fenced"}\n```';
-    globalThis.fetch = mock.fn(async () => ({
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [{ message: { content: fenced } }],
       }),
-    })) as typeof fetch;
+    }));
 
     const result = await chatJson<{ key: string }>(
       { url: "http://localhost:1234", model: "test" },
@@ -101,16 +104,21 @@ describe("chatJson", () => {
     );
 
     assert.deepEqual(result, { key: "fenced" });
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("parses JSON array from response", async () => {
+Deno.test("chatJson parses JSON array from response", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
     const arr = '[{"id": 1}, {"id": 2}]';
-    globalThis.fetch = mock.fn(async () => ({
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [{ message: { content: arr } }],
       }),
-    })) as typeof fetch;
+    }));
 
     const result = await chatJson<{ id: number }[]>(
       { url: "http://localhost:1234", model: "test" },
@@ -120,15 +128,20 @@ describe("chatJson", () => {
 
     assert.equal(result.length, 2);
     assert.equal(result[0].id, 1);
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("throws on invalid JSON after exhausting retries", async () => {
-    globalThis.fetch = mock.fn(async () => ({
+Deno.test("chatJson throws on invalid JSON after exhausting retries", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [{ message: { content: "not json at all" } }],
       }),
-    })) as typeof fetch;
+    }));
 
     await assert.rejects(
       () =>
@@ -140,21 +153,27 @@ describe("chatJson", () => {
       SyntaxError,
     );
 
-    assert.equal(globalThis.fetch.mock.callCount(), 3);
-  });
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof mock.fn>;
+    assert.equal(fetchMock.mock.callCount(), 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("retries on parse failure and succeeds", async () => {
+Deno.test("chatJson retries on parse failure and succeeds", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
     let callCount = 0;
-    globalThis.fetch = mock.fn(async () => {
+    globalThis.fetch = mockFetch(() => {
       callCount++;
       const content = callCount < 3 ? "not json" : '{"key": "recovered"}';
       return {
         ok: true,
-        json: async () => ({
+        json: () => ({
           choices: [{ message: { content } }],
         }),
       };
-    }) as typeof fetch;
+    });
 
     const result = await chatJson<{ key: string }>(
       { url: "http://localhost:1234", model: "test" },
@@ -163,16 +182,22 @@ describe("chatJson", () => {
     );
 
     assert.deepEqual(result, { key: "recovered" });
-    assert.equal(globalThis.fetch.mock.callCount(), 3);
-  });
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof mock.fn>;
+    assert.equal(fetchMock.mock.callCount(), 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("respects custom retry count", async () => {
-    globalThis.fetch = mock.fn(async () => ({
+Deno.test("chatJson respects custom retry count", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [{ message: { content: "not json" } }],
       }),
-    })) as typeof fetch;
+    }));
 
     await assert.rejects(
       () =>
@@ -185,21 +210,27 @@ describe("chatJson", () => {
       SyntaxError,
     );
 
-    assert.equal(globalThis.fetch.mock.callCount(), 1);
-  });
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof mock.fn>;
+    assert.equal(fetchMock.mock.callCount(), 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("retries on validation failure", async () => {
+Deno.test("chatJson retries on validation failure", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
     let callCount = 0;
-    globalThis.fetch = mock.fn(async () => {
+    globalThis.fetch = mockFetch(() => {
       callCount++;
       const content = callCount < 2 ? '{"wrong": "structure"}' : '{"tree": {"label": "ok", "children": []}}';
       return {
         ok: true,
-        json: async () => ({
+        json: () => ({
           choices: [{ message: { content } }],
         }),
       };
-    }) as typeof fetch;
+    });
 
     const result = await chatJson<{ tree: { label: string } }>(
       { url: "http://localhost:1234", model: "test" },
@@ -216,13 +247,19 @@ describe("chatJson", () => {
     );
 
     assert.deepEqual(result, { tree: { label: "ok", children: [] } });
-    assert.equal(globalThis.fetch.mock.callCount(), 2);
-  });
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof mock.fn>;
+    assert.equal(fetchMock.mock.callCount(), 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("extracts JSON wrapped in prose", async () => {
-    globalThis.fetch = mock.fn(async () => ({
+Deno.test("chatJson extracts JSON wrapped in prose", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [
           {
             message: {
@@ -231,7 +268,7 @@ describe("chatJson", () => {
           },
         ],
       }),
-    })) as typeof fetch;
+    }));
 
     const result = await chatJson<{ key: string }>(
       { url: "http://localhost:1234", model: "test" },
@@ -240,12 +277,17 @@ describe("chatJson", () => {
     );
 
     assert.deepEqual(result, { key: "extracted" });
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("extracts JSON array wrapped in prose", async () => {
-    globalThis.fetch = mock.fn(async () => ({
+Deno.test("chatJson extracts JSON array wrapped in prose", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [
           {
             message: {
@@ -254,7 +296,7 @@ describe("chatJson", () => {
           },
         ],
       }),
-    })) as typeof fetch;
+    }));
 
     const result = await chatJson<{ id: number }[]>(
       { url: "http://localhost:1234", model: "test" },
@@ -264,12 +306,17 @@ describe("chatJson", () => {
 
     assert.equal(result.length, 2);
     assert.equal(result[0].id, 1);
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("strips trailing commas", async () => {
-    globalThis.fetch = mock.fn(async () => ({
+Deno.test("chatJson strips trailing commas", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [
           {
             message: {
@@ -278,7 +325,7 @@ describe("chatJson", () => {
           },
         ],
       }),
-    })) as typeof fetch;
+    }));
 
     const result = await chatJson<{ a: number; b: number }>(
       { url: "http://localhost:1234", model: "test" },
@@ -287,12 +334,17 @@ describe("chatJson", () => {
     );
 
     assert.deepEqual(result, { a: 1, b: 2 });
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
-  it("extracts from code fence with surrounding text", async () => {
-    globalThis.fetch = mock.fn(async () => ({
+Deno.test("chatJson extracts from code fence with surrounding text", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = mockFetch(() => ({
       ok: true,
-      json: async () => ({
+      json: () => ({
         choices: [
           {
             message: {
@@ -301,7 +353,7 @@ describe("chatJson", () => {
           },
         ],
       }),
-    })) as typeof fetch;
+    }));
 
     const result = await chatJson<{ wrapped: boolean }>(
       { url: "http://localhost:1234", model: "test" },
@@ -310,31 +362,29 @@ describe("chatJson", () => {
     );
 
     assert.deepEqual(result, { wrapped: true });
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
-describe("SKILLS", () => {
-  it("loads infographic-creator skill", () => {
-    const content = SKILLS.infographicCreator();
-    assert.ok(content.length > 0, "Should load non-empty content");
-    assert.ok(content.includes("infographic"), "Should contain infographic text");
-  });
+Deno.test("SKILLS loads infographic-creator skill", () => {
+  const content = SKILLS.infographicCreator();
+  assert.ok(content.length > 0, "Should load non-empty content");
+  assert.ok(content.includes("infographic"), "Should contain infographic text");
+});
 
-  it("loads infographic-syntax-creator skill", () => {
-    const content = SKILLS.infographicSyntaxCreator();
-    assert.ok(content.length > 0, "Should load non-empty content");
-  });
+Deno.test("SKILLS loads infographic-syntax-creator skill", () => {
+  const content = SKILLS.infographicSyntaxCreator();
+  assert.ok(content.length > 0, "Should load non-empty content");
+});
 
-  it("loads syntax reference prompt", () => {
-    const content = SKILLS.infographicSyntaxPrompt();
-    assert.ok(content.length > 0, "Should load non-empty content");
-  });
+Deno.test("SKILLS loads syntax reference prompt", () => {
+  const content = SKILLS.infographicSyntaxPrompt();
+  assert.ok(content.length > 0, "Should load non-empty content");
+});
 
-  it("returns empty string for missing skill", () => {
-    // We can't directly test loadSkill with a bad name since it's private,
-    // but we can verify the existing skills return truthy
-    assert.ok(SKILLS.infographicCreator());
-    assert.ok(SKILLS.infographicSyntaxCreator());
-    assert.ok(SKILLS.infographicSyntaxPrompt());
-  });
+Deno.test("SKILLS returns truthy for all skills", () => {
+  assert.ok(SKILLS.infographicCreator());
+  assert.ok(SKILLS.infographicSyntaxCreator());
+  assert.ok(SKILLS.infographicSyntaxPrompt());
 });

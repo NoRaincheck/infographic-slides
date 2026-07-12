@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import chalk from "chalk";
-import type { MindmapArtifact, PipelineOptions, StoryArtifact } from "../utils/types.js";
-import { artifactPaths } from "../utils/types.js";
-import { chatJson, type LLMOptions } from "../llm.js";
-import { STORY_SYSTEM, storyUser } from "../prompts/story.js";
+import type { MindmapArtifact, PipelineOptions, StoryArtifact } from "../utils/types.ts";
+import { artifactPaths } from "../utils/types.ts";
+import { chatJson, type LLMOptions } from "../llm.ts";
+import { STORY_SYSTEM, storyUser } from "../prompts/story.ts";
 
 export async function runStory(
   opts: PipelineOptions,

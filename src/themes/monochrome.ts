@@ -1,4 +1,4 @@
-import type { Theme } from "./types.js";
+import type { Theme } from "./types.ts";
 
 export const monochrome: Theme = {
   slug: "monochrome",
@@ -9,7 +9,8 @@ export const monochrome: Theme = {
   css: {
     background: "#f5f2eb",
     textColor: "#1a1a1a",
-    fontImports: "https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap",
+    fontImports:
+      "https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap",
     bodyFontFamily: "'Lora', 'Jost', serif",
   },
   preferredLayouts: ["list-row-horizontal-icon-arrow", "number-big", "chart-bar-horizontal"],

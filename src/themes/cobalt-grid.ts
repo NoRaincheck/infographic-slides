@@ -1,4 +1,4 @@
-import type { Theme } from "./types.js";
+import type { Theme } from "./types.ts";
 
 export const cobaltGrid: Theme = {
   slug: "cobalt-grid",
@@ -9,7 +9,8 @@ export const cobaltGrid: Theme = {
   css: {
     background: "#faf8f3",
     textColor: "#1a1a2e",
-    fontImports: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap",
+    fontImports:
+      "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap",
     bodyFontFamily: "'Instrument Serif', 'DM Sans', serif",
   },
   preferredLayouts: ["list-row-horizontal-icon-arrow", "chart-bar-horizontal", "number-big"],

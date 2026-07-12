@@ -1,11 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import chalk from "chalk";
-import type { PipelineOptions, SlideDesignArtifact, StoryArtifact } from "../utils/types.js";
-import type { Theme } from "../themes/types.js";
-import { artifactPaths } from "../utils/types.js";
-import { chatJson, type LLMOptions } from "../llm.js";
-import { slideDesignSystem, slideDesignUser } from "../prompts/slide-design.js";
+import type { PipelineOptions, SlideDesignArtifact, StoryArtifact } from "../utils/types.ts";
+import type { Theme } from "../themes/types.ts";
+import { artifactPaths } from "../utils/types.ts";
+import { chatJson, type LLMOptions } from "../llm.ts";
+import { slideDesignSystem, slideDesignUser } from "../prompts/slide-design.ts";
 
 export async function runSlideDesign(
   opts: PipelineOptions,
@@ -39,9 +39,7 @@ export async function runSlideDesign(
         ...s.keyPoints.map((kp) => `    - label ${kp}\n      icon star`),
         "theme",
         `  palette ${palette}`,
-        ...(theme && theme.slug !== "vanilla"
-          ? [`  base`, `    text`, `      font-family ${theme.fontFamily}`]
-          : []),
+        ...(theme && theme.slug !== "vanilla" ? [`  base`, `    text`, `      font-family ${theme.fontFamily}`] : []),
       ].join("\n"),
     }));
     mkdirSync(dirname(paths.slideDesign), { recursive: true });

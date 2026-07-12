@@ -1,15 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import chalk from "chalk";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname ?? dirname(new URL(import.meta.url).pathname);
 
 function findProjectRoot(): string {
   let dir = __dirname;
   for (let i = 0; i < 10; i++) {
     if (existsSync(resolve(dir, "skills"))) return dir;
-    if (existsSync(resolve(dir, "package.json"))) return dir;
+    if (existsSync(resolve(dir, "deno.json"))) return dir;
     dir = dirname(dir);
   }
   return resolve(__dirname, "../..");
@@ -129,7 +128,7 @@ function extractJson(raw: string): string {
   else start = Math.min(startBrace, startBracket);
 
   if (start !== -1) {
-    const open = trimmed[start];
+    const _open = trimmed[start];
     let depth = 0;
     let inString = false;
     let escape = false;

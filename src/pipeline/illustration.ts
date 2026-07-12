@@ -1,11 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import chalk from "chalk";
-import type { IllustrationDecision, PipelineOptions, SlideDesignArtifact } from "../utils/types.js";
-import type { Theme } from "../themes/types.js";
-import { artifactPaths } from "../utils/types.js";
-import { chatJson, type LLMOptions } from "../llm.js";
-import { illustrationSystem, illustrationUser } from "../prompts/illustration.js";
+import type { IllustrationDecision, PipelineOptions, SlideDesignArtifact } from "../utils/types.ts";
+import type { Theme } from "../themes/types.ts";
+import { artifactPaths } from "../utils/types.ts";
+import { chatJson, type LLMOptions } from "../llm.ts";
+import { illustrationSystem, illustrationUser } from "../prompts/illustration.ts";
 
 export async function runIllustrations(
   opts: PipelineOptions,

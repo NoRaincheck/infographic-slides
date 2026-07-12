@@ -15,22 +15,20 @@ export async function embedFonts(cssUrl: string): Promise<string> {
     let match;
     while ((match = urlRegex.exec(css)) !== null) {
       const raw = match[1].replace(/['"]/g, "");
-      const absoluteUrl = raw.startsWith("http")
-        ? raw
-        : new URL(raw, cssUrl).href;
+      const absoluteUrl = raw.startsWith("http") ? raw : new URL(raw, cssUrl).href;
 
       try {
         const fontRes = await fetch(absoluteUrl);
         if (!fontRes.ok) continue;
-        const buffer = Buffer.from(await fontRes.arrayBuffer());
-        const base64 = buffer.toString("base64");
+        const bytes = new Uint8Array(await fontRes.arrayBuffer());
+        const base64 = btoa(String.fromCharCode(...bytes));
         const mimeType = absoluteUrl.endsWith(".woff2")
           ? "font/woff2"
           : absoluteUrl.endsWith(".woff")
-            ? "font/woff"
-            : absoluteUrl.endsWith(".ttf")
-              ? "font/ttf"
-              : "application/octet-stream";
+          ? "font/woff"
+          : absoluteUrl.endsWith(".ttf")
+          ? "font/ttf"
+          : "application/octet-stream";
         replacements.push({ original: match[0], dataUri: `url(data:${mimeType};base64,${base64})` });
       } catch {
         // Skip failed font downloads — let the browser handle it

@@ -1,15 +1,19 @@
 import { existsSync, mkdirSync, readFileSync as readBinary, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import chalk from "chalk";
-import type { IllustrationDecision, PipelineOptions, RenderedSlide, SlideDesignArtifact } from "../utils/types.js";
-import type { Theme } from "../themes/types.js";
-import { artifactPaths } from "../utils/types.js";
-import { generateImage } from "../utils/image-gen.js";
-import { removeBackground } from "../utils/bg-removal.js";
-import { compositeIllustration } from "../utils/composite.js";
-import { renderSyntaxToPng } from "../utils/render.js";
-import { chatJsonVision, type LLMOptions } from "../llm.js";
-import { illustrationVerifySystem, illustrationVerifyUser, type IllustrationVerdict } from "../prompts/illustration-verify.js";
+import type { IllustrationDecision, PipelineOptions, RenderedSlide, SlideDesignArtifact } from "../utils/types.ts";
+import type { Theme } from "../themes/types.ts";
+import { artifactPaths } from "../utils/types.ts";
+import { generateImage } from "../utils/image-gen.ts";
+import { removeBackground } from "../utils/bg-removal.ts";
+import { compositeIllustration } from "../utils/composite.ts";
+import { renderSyntaxToPng } from "../utils/render.ts";
+import { chatJsonVision, type LLMOptions } from "../llm.ts";
+import {
+  type IllustrationVerdict,
+  illustrationVerifySystem,
+  illustrationVerifyUser,
+} from "../prompts/illustration-verify.ts";
 
 export async function runRender(
   opts: PipelineOptions,

@@ -1,6 +1,7 @@
-import { getThemeSummaries } from "../themes/index.js";
+import { getThemeSummaries } from "../themes/index.ts";
 
-export const THEME_SELECTION_SYSTEM = `You are a presentation design advisor. Given a topic, pick the best visual theme for the slide deck.
+export const THEME_SELECTION_SYSTEM =
+  `You are a presentation design advisor. Given a topic, pick the best visual theme for the slide deck.
 
 Available themes:
 ${getThemeSummaries()}

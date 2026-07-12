@@ -1,4 +1,4 @@
-import type { Theme } from "./types.js";
+import type { Theme } from "./types.ts";
 
 export const blueProfessional: Theme = {
   slug: "blue-professional",
@@ -9,7 +9,8 @@ export const blueProfessional: Theme = {
   css: {
     background: "#fdfae7",
     textColor: "#111111",
-    fontImports: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap",
+    fontImports:
+      "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap",
     bodyFontFamily: "'Space Grotesk', 'Inter', sans-serif",
   },
   preferredLayouts: ["list-row-horizontal-icon-arrow", "chart-bar-horizontal", "number-big"],

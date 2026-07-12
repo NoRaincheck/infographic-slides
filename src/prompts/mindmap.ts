@@ -1,4 +1,4 @@
-import { getThemeSummaries } from "../themes/index.js";
+import { getThemeSummaries } from "../themes/index.ts";
 
 export const MINDMAP_SYSTEM = `You are an expert at breaking down complex topics into hierarchical concept maps.
 Given a topic, produce a JSON mindmap that decomposes it into a tree of concepts.

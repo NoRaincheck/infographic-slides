@@ -1,9 +1,9 @@
 import chalk from "chalk";
-import type { PipelineOptions } from "../utils/types.js";
-import type { LLMOptions } from "../llm.js";
-import { chatJson } from "../llm.js";
-import { getTheme, type Theme } from "../themes/index.js";
-import { THEME_SELECTION_SYSTEM, themeSelectionUser } from "../prompts/theme-selection.js";
+import type { PipelineOptions } from "../utils/types.ts";
+import type { LLMOptions } from "../llm.ts";
+import { chatJson } from "../llm.ts";
+import { getTheme, type Theme } from "../themes/index.ts";
+import { THEME_SELECTION_SYSTEM, themeSelectionUser } from "../prompts/theme-selection.ts";
 
 interface ThemeSelectionResult {
   theme: string;

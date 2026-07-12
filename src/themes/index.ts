@@ -1,16 +1,16 @@
-import type { Theme } from "./types.js";
-export type { Theme } from "./types.js";
-import { vanilla } from "./vanilla.js";
-import { softEditorial } from "./soft-editorial.js";
-import { blueProfessional } from "./blue-professional.js";
-import { monochrome } from "./monochrome.js";
-import { emeraldEditorial } from "./emerald-editorial.js";
-import { cobaltGrid } from "./cobalt-grid.js";
-import { neoGridBold } from "./neo-grid-bold.js";
-import { velvetDark } from "./velvet-dark.js";
-import { playful } from "./playful.js";
-import { rawGrid } from "./raw-grid.js";
-import { editorialTriTone } from "./editorial-tri-tone.js";
+import type { Theme } from "./types.ts";
+export type { Theme } from "./types.ts";
+import { vanilla } from "./vanilla.ts";
+import { softEditorial } from "./soft-editorial.ts";
+import { blueProfessional } from "./blue-professional.ts";
+import { monochrome } from "./monochrome.ts";
+import { emeraldEditorial } from "./emerald-editorial.ts";
+import { cobaltGrid } from "./cobalt-grid.ts";
+import { neoGridBold } from "./neo-grid-bold.ts";
+import { velvetDark } from "./velvet-dark.ts";
+import { playful } from "./playful.ts";
+import { rawGrid } from "./raw-grid.ts";
+import { editorialTriTone } from "./editorial-tri-tone.ts";
 
 const THEMES: Theme[] = [
   vanilla,
@@ -43,7 +43,9 @@ export function listThemes(): Theme[] {
 export function getThemeSummaries(): string {
   return THEMES.map(
     (t) =>
-      `- ${t.slug}: ${t.name} — ${t.description} [mood: ${t.mood.join(", ")}, formality: ${t.formality}, scheme: ${t.scheme}]`,
+      `- ${t.slug}: ${t.name} — ${t.description} [mood: ${
+        t.mood.join(", ")
+      }, formality: ${t.formality}, scheme: ${t.scheme}]`,
   ).join("\n");
 }
 

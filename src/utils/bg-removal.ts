@@ -1,11 +1,10 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname ?? resolve(new URL(import.meta.url).pathname, "..");
 const PROJECT_ROOT = resolve(__dirname, "../..");
 const SCRIPT_PATH = resolve(PROJECT_ROOT, "models/birefnet_removal.py");
 

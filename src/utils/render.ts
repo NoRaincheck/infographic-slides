@@ -2,8 +2,8 @@ import puppeteer from "puppeteer";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { renderToString } from "@antv/infographic/ssr";
-import type { Theme } from "../themes/types.js";
-import { embedFonts } from "./fonts.js";
+import type { Theme } from "../themes/types.ts";
+import { embedFonts } from "./fonts.ts";
 
 export interface TextItem {
   x: number;
@@ -33,10 +33,9 @@ function buildHtml(
   embeddedFontCss: string,
   theme?: Theme,
 ): string {
-  const bodyStyle =
-    theme && theme.slug !== "vanilla"
-      ? `background: ${theme.css.background}; font-family: ${theme.css.bodyFontFamily}; color: ${theme.css.textColor};`
-      : "";
+  const bodyStyle = theme && theme.slug !== "vanilla"
+    ? `background: ${theme.css.background}; font-family: ${theme.css.bodyFontFamily}; color: ${theme.css.textColor};`
+    : "";
 
   return `
 <!DOCTYPE html>
@@ -63,10 +62,9 @@ function buildHtmlTextOverlay(
   embeddedFontCss: string,
   theme?: Theme,
 ): string {
-  const bodyStyle =
-    theme && theme.slug !== "vanilla"
-      ? `background: ${theme.css.background}; font-family: ${theme.css.bodyFontFamily}; color: ${theme.css.textColor};`
-      : "";
+  const bodyStyle = theme && theme.slug !== "vanilla"
+    ? `background: ${theme.css.background}; font-family: ${theme.css.bodyFontFamily}; color: ${theme.css.textColor};`
+    : "";
 
   const scaleX = viewportW / svgViewBox.w;
   const scaleY = viewportH / svgViewBox.h;
@@ -80,8 +78,7 @@ function buildHtmlTextOverlay(
       const justifyMap = { left: "flex-start", center: "center", right: "flex-end" };
       const alignMap = { top: "flex-start", middle: "center", bottom: "flex-end" };
       const textAlignMap = { left: "left", center: "center", right: "right" };
-      const alignmentStyle =
-        `justify-content:${justifyMap[item.horizontalAlign]};` +
+      const alignmentStyle = `justify-content:${justifyMap[item.horizontalAlign]};` +
         `align-items:${alignMap[item.verticalAlign]};` +
         `align-content:${alignMap[item.verticalAlign]};` +
         `text-align:${textAlignMap[item.horizontalAlign]};`;
@@ -142,83 +139,87 @@ function parseViewBox(svg: string): { x: number; y: number; w: number; h: number
 async function extractTextItems(
   page: puppeteer.Page,
 ): Promise<{ textItems: TextItem[]; cleanedSvg: string }> {
-  const result = await page.evaluate(() => {
-    const svgEl = document.querySelector("svg");
-    if (!svgEl) return { textItems: [], cleanedSvg: "" };
+  const result = await page.evaluate(
+    () => {
+      // deno-lint-ignore no-explicit-any
+      const svgEl = (globalThis as any).document.querySelector("svg");
+      if (!svgEl) return { textItems: [], cleanedSvg: "" };
 
-    const textItems: Array<{
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      html: string;
-      spanStyle: string;
-      horizontalAlign: string;
-      verticalAlign: string;
-    }> = [];
+      const textItems: Array<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        html: string;
+        spanStyle: string;
+        horizontalAlign: string;
+        verticalAlign: string;
+      }> = [];
 
-    const foreignObjects = svgEl.querySelectorAll("foreignObject");
+      const foreignObjects = svgEl.querySelectorAll("foreignObject");
 
-    foreignObjects.forEach((fo) => {
-      const rect = fo.getBoundingClientRect();
-      const svgRect = svgEl.getBoundingClientRect();
+      // deno-lint-ignore no-explicit-any
+      foreignObjects.forEach((fo: any) => {
+        const rect = fo.getBoundingClientRect();
+        const svgRect = svgEl.getBoundingClientRect();
 
-      const span = fo.querySelector("span");
-      if (!span) return;
+        const span = fo.querySelector("span");
+        if (!span) return;
 
-      const spanStyle = span.getAttribute("style") || "";
-      const text = span.textContent || "";
+        const spanStyle = span.getAttribute("style") || "";
+        const text = span.textContent || "";
 
-      let horizontalAlign = "left";
-      let verticalAlign = "top";
+        let horizontalAlign = "left";
+        let verticalAlign = "top";
 
-      const justifyMatch = spanStyle.match(/justify-content:\s*([^;]+);/);
-      if (justifyMatch) {
-        const v = justifyMatch[1].trim();
-        if (v === "center") horizontalAlign = "center";
-        else if (v === "flex-end") horizontalAlign = "right";
-      }
+        const justifyMatch = spanStyle.match(/justify-content:\s*([^;]+);/);
+        if (justifyMatch) {
+          const v = justifyMatch[1].trim();
+          if (v === "center") horizontalAlign = "center";
+          else if (v === "flex-end") horizontalAlign = "right";
+        }
 
-      const alignContentMatch = spanStyle.match(/align-content:\s*([^;]+);/);
-      if (alignContentMatch) {
-        const v = alignContentMatch[1].trim();
-        if (v === "center") verticalAlign = "middle";
-        else if (v === "flex-end") verticalAlign = "bottom";
-      }
+        const alignContentMatch = spanStyle.match(/align-content:\s*([^;]+);/);
+        if (alignContentMatch) {
+          const v = alignContentMatch[1].trim();
+          if (v === "center") verticalAlign = "middle";
+          else if (v === "flex-end") verticalAlign = "bottom";
+        }
 
-      const cleanStyle = spanStyle
-        .replace(/width:\s*100%;/g, "")
-        .replace(/height:\s*100%;/g, "")
-        .replace(/display:\s*flex;/g, "")
-        .replace(/flex-wrap:\s*wrap;/g, "")
-        .replace(/overflow:\s*visible;/g, "")
-        .replace(/justify-content:\s*[^;]+;/g, "")
-        .replace(/align-content:\s*[^;]+;/g, "")
-        .replace(/align-items:\s*[^;]+;/g, "")
-        .replace(/text-align:\s*[^;]+;/g, "");
+        const cleanStyle = spanStyle
+          .replace(/width:\s*100%;/g, "")
+          .replace(/height:\s*100%;/g, "")
+          .replace(/display:\s*flex;/g, "")
+          .replace(/flex-wrap:\s*wrap;/g, "")
+          .replace(/overflow:\s*visible;/g, "")
+          .replace(/justify-content:\s*[^;]+;/g, "")
+          .replace(/align-content:\s*[^;]+;/g, "")
+          .replace(/align-items:\s*[^;]+;/g, "")
+          .replace(/text-align:\s*[^;]+;/g, "");
 
-      const scaleX = svgRect.width > 0 ? svgEl.viewBox.baseVal.width / svgRect.width : 1;
-      const scaleY = svgRect.height > 0 ? svgEl.viewBox.baseVal.height / svgRect.height : 1;
+        const scaleX = svgRect.width > 0 ? svgEl.viewBox.baseVal.width / svgRect.width : 1;
+        const scaleY = svgRect.height > 0 ? svgEl.viewBox.baseVal.height / svgRect.height : 1;
 
-      textItems.push({
-        x: svgEl.viewBox.baseVal.x + (rect.left - svgRect.left) * scaleX,
-        y: svgEl.viewBox.baseVal.y + (rect.top - svgRect.top) * scaleY,
-        width: rect.width * scaleX,
-        height: rect.height * scaleY,
-        html: `<span style="${cleanStyle}">${text}</span>`,
-        spanStyle: cleanStyle,
-        horizontalAlign,
-        verticalAlign,
+        textItems.push({
+          x: svgEl.viewBox.baseVal.x + (rect.left - svgRect.left) * scaleX,
+          y: svgEl.viewBox.baseVal.y + (rect.top - svgRect.top) * scaleY,
+          width: rect.width * scaleX,
+          height: rect.height * scaleY,
+          html: `<span style="${cleanStyle}">${text}</span>`,
+          spanStyle: cleanStyle,
+          horizontalAlign,
+          verticalAlign,
+        });
+
+        fo.remove();
       });
 
-      fo.remove();
-    });
+      // deno-lint-ignore no-explicit-any
+      const cleanedSvg = new (globalThis as any).XMLSerializer().serializeToString(svgEl);
 
-    const serializer = new XMLSerializer();
-    const cleanedSvg = serializer.serializeToString(svgEl);
-
-    return { textItems, cleanedSvg };
-  });
+      return { textItems, cleanedSvg };
+    },
+  );
 
   return result as { textItems: TextItem[]; cleanedSvg: string };
 }

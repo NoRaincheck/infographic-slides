@@ -1,4 +1,4 @@
-import type { Theme } from "./types.js";
+import type { Theme } from "./types.ts";
 
 export const playful: Theme = {
   slug: "playful",
@@ -9,7 +9,8 @@ export const playful: Theme = {
   css: {
     background: "#fff5eb",
     textColor: "#2d2d2d",
-    fontImports: "https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap",
+    fontImports:
+      "https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap",
     bodyFontFamily: "'Syne', 'DM Sans', sans-serif",
   },
   preferredLayouts: ["list-row-horizontal-icon-arrow", "number-big", "chart-bar-horizontal"],

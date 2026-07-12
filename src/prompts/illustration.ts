@@ -1,5 +1,5 @@
-import type { SlideDesignArtifact } from "../utils/types.js";
-import type { Theme } from "../themes/types.js";
+import type { SlideDesignArtifact } from "../utils/types.ts";
+import type { Theme } from "../themes/types.ts";
 
 export function illustrationSystem(theme?: Theme): string {
   const themeContext = theme && theme.slug !== "vanilla"
@@ -8,12 +8,26 @@ export function illustrationSystem(theme?: Theme): string {
 - Color scheme: ${theme.scheme}
 - Palette: ${theme.palette.join(", ")}
 - Mood: ${theme.mood.join(", ")}
-${theme.scheme === "dark" ? `- The slides use a dark background (${theme.css.background}) with light text (${theme.css.textColor}).
-  Illustrations should have dark backgrounds or tones that blend with dark slides. Avoid bright white backgrounds.` : ""}
-${theme.scheme === "light" ? `- The slides use a light background (${theme.css.background}) with dark text (${theme.css.textColor}).
-  Illustrations should work well on light backgrounds. Avoid overly dark full-bleed images.` : ""}
-${theme.scheme === "mixed" ? `- The slides mix light backgrounds (${theme.css.background}) with dark accent blocks.
-  Illustrations can use either light or dark backgrounds, but should feel cohesive with the palette colors: ${theme.palette.join(", ")}.` : ""}`
+${
+      theme.scheme === "dark"
+        ? `- The slides use a dark background (${theme.css.background}) with light text (${theme.css.textColor}).
+  Illustrations should have dark backgrounds or tones that blend with dark slides. Avoid bright white backgrounds.`
+        : ""
+    }
+${
+      theme.scheme === "light"
+        ? `- The slides use a light background (${theme.css.background}) with dark text (${theme.css.textColor}).
+  Illustrations should work well on light backgrounds. Avoid overly dark full-bleed images.`
+        : ""
+    }
+${
+      theme.scheme === "mixed"
+        ? `- The slides mix light backgrounds (${theme.css.background}) with dark accent blocks.
+  Illustrations can use either light or dark backgrounds, but should feel cohesive with the palette colors: ${
+          theme.palette.join(", ")
+        }.`
+        : ""
+    }`
     : "";
 
   return `You are a visual design advisor.
@@ -26,7 +40,11 @@ Rules:
 - NOT needed for: simple lists, charts, timelines that are self-explanatory
 - Keep illustration prompts descriptive but concise (1-2 sentences)
 - Aim for 2-4 illustrations across the entire deck
-${theme && theme.slug !== "vanilla" ? `- Illustration prompts should produce images that visually match the "${theme.name}" theme's color palette and mood` : ""}
+${
+    theme && theme.slug !== "vanilla"
+      ? `- Illustration prompts should produce images that visually match the "${theme.name}" theme's color palette and mood`
+      : ""
+  }
 
 Image generation guidelines (MUST follow for all prompts):
 - Always specify a SOLID, FLAT-Color background (e.g. "solid white background", "flat background in #1e293b", "single-color background in #f1f5f9")

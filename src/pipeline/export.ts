@@ -1,11 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import chalk from "chalk";
-import type { PipelineOptions, RenderedSlide, SlideDesignArtifact } from "../utils/types.js";
-import { artifactPaths } from "../utils/types.js";
-import { editImage } from "../utils/image-gen.js";
+import type { PipelineOptions, RenderedSlide, SlideDesignArtifact } from "../utils/types.ts";
+import { artifactPaths } from "../utils/types.ts";
 
-export async function runExport(
+export function runExport(
   opts: PipelineOptions,
   slides: SlideDesignArtifact[],
   rendered: RenderedSlide[],

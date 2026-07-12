@@ -1,4 +1,4 @@
-import type { MindmapNode } from "../utils/types.js";
+import type { MindmapNode } from "../utils/types.ts";
 
 export const STORY_SYSTEM = `You are an expert presentation designer.
 Given a mindmap of concepts, plan a coherent slide deck that tells a compelling story.

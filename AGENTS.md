@@ -13,33 +13,34 @@ SSR + Puppeteer. Image generation uses Flux 2 via CLI.
 ## Build & run
 
 ```sh
-npm run build        # TypeScript compile to dist/
-npm run test         # Run tests (node:test + tsx)
-npm run dev          # Build + run
-node dist/index.js   # CLI entry point
+deno task dev          # Run the CLI
+deno task test         # Run tests
+deno task check        # Type-check all sources
+deno task lint         # Lint
+deno task fmt          # Format
 ```
 
-Verify changes with `npx tsc --noEmit` and `npm test`.
+Verify changes with `deno task check` and `deno task test`.
 
 ## Key files
 
-| File                     | Purpose                                                   |
-| ------------------------ | --------------------------------------------------------- |
-| `src/index.ts`           | CLI entry point, orchestrates pipeline                    |
-| `src/llm.ts`             | LLM client (`chat`, `chatJson`, `chatVision`) + skill loader |
-| `src/prompts/*.ts`       | System/user prompts for each LLM call                     |
-| `src/pipeline/*.ts`      | One file per pipeline stage                               |
-| `src/utils/types.ts`     | Shared interfaces + artifact path helpers                 |
-| `src/utils/render.ts`    | AntV SSR → SVG → Puppeteer → PNG                          |
-| `src/utils/image-gen.ts` | Flux 2 CLI wrapper (generate + edit)                      |
-| `src/utils/bg-removal.ts`| BiRefNet background removal via `uv run`                  |
-| `src/utils/composite.ts` | Transparent illustration overlay via Puppeteer canvas      |
-| `skills/`                | Vendored AntV Infographic skills (prompt context for LLM) |
-| `test/*.test.ts`         | Unit tests (node:test + tsx)                              |
+| File                      | Purpose                                                      |
+| ------------------------- | ------------------------------------------------------------ |
+| `src/index.ts`            | CLI entry point, orchestrates pipeline                       |
+| `src/llm.ts`              | LLM client (`chat`, `chatJson`, `chatVision`) + skill loader |
+| `src/prompts/*.ts`        | System/user prompts for each LLM call                        |
+| `src/pipeline/*.ts`       | One file per pipeline stage                                  |
+| `src/utils/types.ts`      | Shared interfaces + artifact path helpers                    |
+| `src/utils/render.ts`     | AntV SSR → SVG → Puppeteer → PNG                             |
+| `src/utils/image-gen.ts`  | Flux 2 CLI wrapper (generate + edit)                         |
+| `src/utils/bg-removal.ts` | BiRefNet background removal via `uv run`                     |
+| `src/utils/composite.ts`  | Transparent illustration overlay via Puppeteer canvas        |
+| `skills/`                 | Vendored AntV Infographic skills (prompt context for LLM)    |
+| `test/*.test.ts`          | Unit tests (Deno test)                                       |
 
 ## Conventions
 
-- **ESM only** — `"type": "module"` in package.json, all imports use `.js` extensions
+- **Deno native ESM** — all local imports use `.ts` extensions
 - **No comments** in source code unless explaining non-obvious behavior
 - **Artifact pattern**: each stage reads from disk cache → LLM call → writes artifact JSON
   - Cache check: `!opts.regenerate.includes(stage) && !opts.skip.includes(stage) && existsSync(path)`
@@ -83,19 +84,21 @@ When adding a new pipeline stage:
 
 - `@antv/infographic/ssr` provides `renderToString` for Node.js (no browser needed)
 - Puppeteer renders the SVG to high-DPI PNG
-- Illustrations are generated with solid backgrounds, backgrounds are removed via BiRefNet, then composited onto rendered slides using Puppeteer canvas
+- Illustrations are generated with solid backgrounds, backgrounds are removed via BiRefNet, then composited onto
+  rendered slides using Puppeteer canvas
 
 ## Illustration pipeline
 
 Illustrations are optional (`--illustrations on|off|auto`). When enabled, the render stage:
+
 1. Generates illustration with solid-color background (for clean removal)
 2. Removes background via BiRefNet (`uv run models/birefnet_removal.py`)
 3. Renders slide AntV syntax to PNG (no `Illus` component in syntax)
 4. Composites transparent illustration onto slide PNG via Puppeteer canvas
 5. Optionally verifies composited result via LLM vision
 
-Background removal uses Python (via `uv run`) with ONNX runtime. Python dependencies are in `pyproject.toml`.
-The LLM client supports multimodal messages (`chatVision`, `chatJsonVision`) for vision verification.
+Background removal uses Python (via `uv run`) with ONNX runtime. Python dependencies are in `pyproject.toml`. The LLM
+client supports multimodal messages (`chatVision`, `chatJsonVision`) for vision verification.
 
 ## Adding a new pipeline stage
 
@@ -107,10 +110,12 @@ The LLM client supports multimodal messages (`chatVision`, `chatJsonVision`) for
 
 ## Dependencies
 
-- `@antv/infographic` — not in package.json (used via CDN in browser, SSR via `@antv/infographic/ssr`)
+All npm dependencies are resolved via `npm:` specifiers in `deno.json`:
+
 - `puppeteer` — headless Chrome for PNG export
 - `commander` — CLI argument parsing
 - `chalk` — terminal colors
+- `@antv/infographic` — SSR infographic rendering
 - `ora` — spinners (not yet wired up)
 
 ## Common pitfalls
@@ -119,3 +124,5 @@ The LLM client supports multimodal messages (`chatVision`, `chatJsonVision`) for
 - The `Illus` component accepts base64 data URIs for embedded images
 - Flux 2 CLI paths are hardcoded in `src/utils/image-gen.ts` — update for your system
 - Puppeteer `headless: true` (not `"new"`) for TypeScript compatibility
+- Browser globals inside `page.evaluate()` callbacks are cast via `(globalThis as any)` to avoid Deno type errors
+- `Buffer` is not available in Deno — use `Uint8Array` + `btoa()` instead

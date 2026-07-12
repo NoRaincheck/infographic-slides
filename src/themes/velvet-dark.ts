@@ -1,4 +1,4 @@
-import type { Theme } from "./types.js";
+import type { Theme } from "./types.ts";
 
 export const velvetDark: Theme = {
   slug: "velvet-dark",
@@ -9,7 +9,8 @@ export const velvetDark: Theme = {
   css: {
     background: "#0f1b3d",
     textColor: "#f0d060",
-    fontImports: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap",
+    fontImports:
+      "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap",
     bodyFontFamily: "'Cormorant Garamond', 'Inter', serif",
   },
   preferredLayouts: ["list-row-horizontal-icon-arrow", "number-big", "chart-bar-horizontal"],

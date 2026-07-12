@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import chalk from "chalk";
-import type { MindmapArtifact, MindmapNode, PipelineOptions } from "../utils/types.js";
-import { artifactPaths } from "../utils/types.js";
-import { chatJson, type LLMOptions } from "../llm.js";
-import { MINDMAP_SYSTEM, mindmapUser } from "../prompts/mindmap.js";
+import type { MindmapArtifact, MindmapNode, PipelineOptions } from "../utils/types.ts";
+import { artifactPaths } from "../utils/types.ts";
+import { chatJson, type LLMOptions } from "../llm.ts";
+import { MINDMAP_SYSTEM, mindmapUser } from "../prompts/mindmap.ts";
 
 function normalizeMindmap(
   raw: Record<string, unknown>,

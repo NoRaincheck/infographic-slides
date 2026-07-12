@@ -1,20 +1,19 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S deno run
 
 import { Command } from "commander";
 import chalk from "chalk";
 import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
-import type { PipelineOptions, StageName } from "./utils/types.js";
-import { STAGE_NAMES } from "./utils/types.js";
-import type { LLMOptions } from "./llm.js";
-import type { Theme } from "./themes/types.js";
-import { getTheme } from "./themes/index.js";
-import { runMindmap } from "./pipeline/mindmap.js";
-import { runStory } from "./pipeline/story.js";
-import { runSlideDesign } from "./pipeline/slide-design.js";
-import { runIllustrations } from "./pipeline/illustration.js";
-import { runRender } from "./pipeline/slide-render.js";
-import { runExport } from "./pipeline/export.js";
-import { runThemeSelection } from "./pipeline/theme-select.js";
+import process from "node:process";
+import type { PipelineOptions, StageName } from "./utils/types.ts";
+import type { LLMOptions } from "./llm.ts";
+import type { Theme } from "./themes/types.ts";
+import { getTheme } from "./themes/index.ts";
+import { runMindmap } from "./pipeline/mindmap.ts";
+import { runStory } from "./pipeline/story.ts";
+import { runSlideDesign } from "./pipeline/slide-design.ts";
+import { runIllustrations } from "./pipeline/illustration.ts";
+import { runRender } from "./pipeline/slide-render.ts";
+import { runThemeSelection } from "./pipeline/theme-select.ts";
 
 function parseList(val: string): string[] {
   return val
@@ -168,6 +167,7 @@ program
     stages.push({
       name: "export",
       label: "Export",
+      // deno-lint-ignore require-await
       run: async () => {
         // Export is handled inline for now
         console.log(chalk.gray("  Post-processing (placeholder)"));

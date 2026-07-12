@@ -1,14 +1,19 @@
-import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
+
+function mockFetch(fn: () => unknown) {
+  // deno-lint-ignore no-explicit-any
+  return fn as any;
+}
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { runMindmap } from "../src/pipeline/mindmap.js";
-import { runStory } from "../src/pipeline/story.js";
-import { runSlideDesign } from "../src/pipeline/slide-design.js";
-import { runIllustrations } from "../src/pipeline/illustration.js";
-import { artifactPaths, type LLMOptions, type PipelineOptions } from "../src/utils/types.js";
-import type { Theme } from "../src/themes/types.js";
+import { runMindmap } from "../src/pipeline/mindmap.ts";
+import { runStory } from "../src/pipeline/story.ts";
+import { runSlideDesign } from "../src/pipeline/slide-design.ts";
+import { runIllustrations } from "../src/pipeline/illustration.ts";
+import { artifactPaths, type PipelineOptions } from "../src/utils/types.ts";
+import type { LLMOptions } from "../src/llm.ts";
+import type { Theme } from "../src/themes/types.ts";
 
 function tmpDir(): string {
   return join(tmpdir(), `test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -35,18 +40,9 @@ function baseOpts(dir: string): PipelineOptions {
 
 const llmOpts: LLMOptions = { url: "http://localhost:1234", model: "test" };
 
-describe("runMindmap", () => {
-  let dir: string;
-
-  beforeEach(() => {
-    dir = tmpDir();
-  });
-
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("produces minimal mindmap when skipped", async () => {
+Deno.test("runMindmap produces minimal mindmap when skipped", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), skip: ["mindmap"] };
     const result = await runMindmap(opts, llmOpts);
 
@@ -55,15 +51,19 @@ describe("runMindmap", () => {
     assert.deepEqual(result.tree.children, []);
     assert.equal(result.theme, "vanilla");
 
-    // Should write artifact
     const paths = artifactPaths(dir);
     assert.ok(existsSync(paths.mindmap));
     const artifact = JSON.parse(readFileSync(paths.mindmap, "utf-8"));
     assert.equal(artifact.tree.label, "test topic");
     assert.equal(artifact.theme, "vanilla");
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("reads cached artifact when it exists", async () => {
+Deno.test("runMindmap reads cached artifact when it exists", async () => {
+  const dir = tmpDir();
+  try {
     const paths = artifactPaths(dir);
     mkdirSync(dir + "/artifacts", { recursive: true });
     const cached = {
@@ -78,9 +78,14 @@ describe("runMindmap", () => {
     assert.equal(result.tree.label, "Cached");
     assert.equal(result.input, "cached topic");
     assert.equal(result.theme, "vanilla");
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("uses CLI theme override in mindmap artifact", async () => {
+Deno.test("runMindmap uses CLI theme override in mindmap artifact", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), skip: ["mindmap"], theme: "velvet-dark" };
     const result = await runMindmap(opts, llmOpts);
 
@@ -89,9 +94,14 @@ describe("runMindmap", () => {
     const paths = artifactPaths(dir);
     const artifact = JSON.parse(readFileSync(paths.mindmap, "utf-8"));
     assert.equal(artifact.theme, "velvet-dark");
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("preserves theme from cached artifact", async () => {
+Deno.test("runMindmap preserves theme from cached artifact", async () => {
+  const dir = tmpDir();
+  try {
     const paths = artifactPaths(dir);
     mkdirSync(dir + "/artifacts", { recursive: true });
     const cached = {
@@ -105,48 +115,47 @@ describe("runMindmap", () => {
     const result = await runMindmap(opts, llmOpts);
 
     assert.equal(result.theme, "playful");
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("ignores cache when regenerate includes mindmap", async () => {
+Deno.test("runMindmap ignores cache when regenerate includes mindmap", async () => {
+  const dir = tmpDir();
+  try {
     const paths = artifactPaths(dir);
     mkdirSync(dir + "/artifacts", { recursive: true });
     writeFileSync(paths.mindmap, JSON.stringify({ input: "old", tree: { label: "Old" } }));
 
     const opts = { ...baseOpts(dir), regenerate: ["mindmap"] };
 
-    // Mock fetch to simulate LLM response so it doesn't hang
     const originalFetch = globalThis.fetch;
     const llmResponse = { tree: { label: "New", children: [] } };
-    globalThis.fetch = mock.fn(async () => ({
-      ok: true,
-      json: async () => ({
-        choices: [{ message: { content: JSON.stringify(llmResponse) } }],
-      }),
-    })) as typeof fetch;
+    globalThis.fetch = mockFetch(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: JSON.stringify(llmResponse) } }],
+          }),
+      })
+    );
 
     try {
       const result = await runMindmap(opts, llmOpts);
-      // Should NOT have the cached "Old" — it called LLM and got "New"
       assert.equal(result.tree.label, "New");
       assert.equal(result.input, "test topic");
     } finally {
       globalThis.fetch = originalFetch;
     }
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
-describe("runStory", () => {
-  let dir: string;
-
-  beforeEach(() => {
-    dir = tmpDir();
-  });
-
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("produces minimal story from mindmap when skipped", async () => {
+Deno.test("runStory produces minimal story from mindmap when skipped", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), skip: ["story"], slides: 3 };
     const mindmap = {
       input: "topic",
@@ -169,9 +178,14 @@ describe("runStory", () => {
     assert.equal(result.slides[0].keyPoints.length, 2);
     assert.equal(result.slides[1].title, "B");
     assert.equal(result.slides[1].keyPoints.length, 0);
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("reads cached artifact when it exists", async () => {
+Deno.test("runStory reads cached artifact when it exists", async () => {
+  const dir = tmpDir();
+  try {
     const paths = artifactPaths(dir);
     mkdirSync(dir + "/artifacts", { recursive: true });
     const cached = {
@@ -186,29 +200,27 @@ describe("runStory", () => {
 
     assert.equal(result.storyTitle, "Cached Story");
     assert.equal(result.slides.length, 1);
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("uses default 5 slides when no count specified and skipped", async () => {
+Deno.test("runStory uses default 5 slides when no count specified and skipped", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), skip: ["story"] };
     const mindmap = { input: "t", tree: { label: "T" }, theme: "vanilla" };
 
     const result = await runStory(opts, llmOpts, mindmap);
     assert.equal(result.targetSlides, 5);
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
-describe("runSlideDesign", () => {
-  let dir: string;
-
-  beforeEach(() => {
-    dir = tmpDir();
-  });
-
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("produces default slide designs when skipped", async () => {
+Deno.test("runSlideDesign produces default slide designs when skipped", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), skip: ["slides"] };
     const story = {
       storyTitle: "Test",
@@ -227,14 +239,17 @@ describe("runSlideDesign", () => {
     assert.equal(result[0].template, "list-row-horizontal-icon-arrow");
     assert.ok(result[0].syntax.includes("Slide One"));
     assert.ok(result[0].syntax.includes("infographic list-row-horizontal-icon-arrow"));
-
-    // Each key point should produce a label in the syntax
     assert.ok(result[0].syntax.includes("label a"));
     assert.ok(result[0].syntax.includes("label b"));
     assert.ok(result[0].syntax.includes("label c"));
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("reads cached artifact", async () => {
+Deno.test("runSlideDesign reads cached artifact", async () => {
+  const dir = tmpDir();
+  try {
     const paths = artifactPaths(dir);
     mkdirSync(dir + "/artifacts", { recursive: true });
     const cached = [
@@ -246,9 +261,14 @@ describe("runSlideDesign", () => {
     const result = await runSlideDesign(baseOpts(dir), llmOpts, story);
 
     assert.equal(result[0].template, "chart-bar-plain-text");
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("uses theme palette in skip fallback when theme is provided", async () => {
+Deno.test("runSlideDesign uses theme palette in skip fallback when theme is provided", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), skip: ["slides"] };
     const story = {
       storyTitle: "Test",
@@ -276,9 +296,14 @@ describe("runSlideDesign", () => {
 
     assert.ok(result[0].syntax.includes("#ff0000 #00ff00 #0000ff"), "Should use theme palette in syntax");
     assert.ok(!result[0].syntax.includes("#3b82f6 #8b5cf6 #f97316"), "Should not use default palette");
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("falls back to default palette in skip fallback when no theme", async () => {
+Deno.test("runSlideDesign falls back to default palette in skip fallback when no theme", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), skip: ["slides"] };
     const story = {
       storyTitle: "Test",
@@ -291,9 +316,14 @@ describe("runSlideDesign", () => {
     const result = await runSlideDesign(opts, llmOpts, story);
 
     assert.ok(result[0].syntax.includes("#3b82f6 #8b5cf6 #f97316"), "Should use default palette");
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("includes font-family in skip fallback when theme has fontFamily", async () => {
+Deno.test("runSlideDesign includes font-family in skip fallback when theme has fontFamily", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), skip: ["slides"] };
     const story = {
       storyTitle: "Test",
@@ -321,21 +351,14 @@ describe("runSlideDesign", () => {
 
     assert.ok(result[0].syntax.includes("'Cormorant Garamond', serif"), "Should include font-family in syntax");
     assert.ok(result[0].syntax.includes("base"), "Should include base block for font");
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
-describe("runIllustrations", () => {
-  let dir: string;
-
-  beforeEach(() => {
-    dir = tmpDir();
-  });
-
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("returns null prompts when illustrations are off", async () => {
+Deno.test("runIllustrations returns null prompts when illustrations are off", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), illustrations: "off" as const };
     const slides = [
       { slideIndex: 0, title: "A", template: "list-*", syntax: "..." },
@@ -347,9 +370,14 @@ describe("runIllustrations", () => {
     assert.equal(result.length, 2);
     assert.equal(result[0].prompt, null);
     assert.equal(result[1].prompt, null);
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("returns null prompts when skipped", async () => {
+Deno.test("runIllustrations returns null prompts when skipped", async () => {
+  const dir = tmpDir();
+  try {
     const opts = { ...baseOpts(dir), skip: ["illustrations"] };
     const slides = [
       { slideIndex: 0, title: "A", template: "list-*", syntax: "..." },
@@ -357,9 +385,14 @@ describe("runIllustrations", () => {
 
     const result = await runIllustrations(opts, llmOpts, slides);
     assert.equal(result[0].prompt, null);
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
-  it("reads cached artifact", async () => {
+Deno.test("runIllustrations reads cached artifact", async () => {
+  const dir = tmpDir();
+  try {
     const paths = artifactPaths(dir);
     mkdirSync(dir + "/artifacts", { recursive: true });
     const cached = [
@@ -376,5 +409,7 @@ describe("runIllustrations", () => {
 
     assert.equal(result[0].prompt, "A cat");
     assert.equal(result[1].prompt, null);
-  });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

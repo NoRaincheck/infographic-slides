@@ -1,6 +1,5 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { mkdirSync } from "node:fs";
 import puppeteer from "puppeteer";
 
 export interface CompositePosition {
@@ -26,8 +25,8 @@ export async function compositeIllustration(
 
   const slideBuf = readFileSync(slidePng);
   const illusBuf = readFileSync(illustrationPng);
-  const slideB64 = slideBuf.toString("base64");
-  const illusB64 = illusBuf.toString("base64");
+  const slideB64 = btoa(String.fromCharCode(...new Uint8Array(slideBuf)));
+  const illusB64 = btoa(String.fromCharCode(...new Uint8Array(illusBuf)));
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -37,15 +36,14 @@ export async function compositeIllustration(
   try {
     const page = await browser.newPage();
 
-    const result = await page.evaluate(
-      async (
-        slideDataUri: string,
-        illusDataUri: string,
-        pos: CompositePosition | undefined,
-      ) => {
-        const loadImg = (src: string): Promise<HTMLImageElement> =>
+    const result: string = await page.evaluate(
+      // deno-lint-ignore no-explicit-any
+      async (slideDataUri: string, illusDataUri: string, pos: any) => {
+        // deno-lint-ignore no-explicit-any
+        const loadImg = (src: string): Promise<any> =>
           new Promise((resolve, reject) => {
-            const img = new Image();
+            // deno-lint-ignore no-explicit-any
+            const img = new (globalThis as any).Image();
             img.onload = () => resolve(img);
             img.onerror = reject;
             img.src = src;
@@ -57,7 +55,8 @@ export async function compositeIllustration(
         const w = slideImg.naturalWidth;
         const h = slideImg.naturalHeight;
 
-        const canvas = document.createElement("canvas");
+        // deno-lint-ignore no-explicit-any
+        const canvas = (globalThis as any).document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext("2d")!;
@@ -92,7 +91,7 @@ export async function compositeIllustration(
       position,
     );
 
-    writeFileSync(outputPath, Buffer.from(result, "base64"));
+    writeFileSync(outputPath, new Uint8Array(atob(result).split("").map((c) => c.charCodeAt(0))));
     return outputPath;
   } finally {
     await browser.close();

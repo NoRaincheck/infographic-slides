@@ -1,4 +1,4 @@
-import type { Theme } from "./types.js";
+import type { Theme } from "./types.ts";
 
 export const neoGridBold: Theme = {
   slug: "neo-grid-bold",

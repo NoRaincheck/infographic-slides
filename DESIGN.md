@@ -129,11 +129,13 @@ Artifacts are:
 Illustrations are composited onto slides as transparent overlays:
 
 1. **Generation**: Flux 2 CLI produces a PNG with a solid flat-color background
-2. **Background removal**: BiRefNet (via `uv run models/birefnet_removal.py`) removes the background, producing a transparent PNG
+2. **Background removal**: BiRefNet (via `uv run models/birefnet_removal.py`) removes the background, producing a
+   transparent PNG
 3. **Compositing**: The transparent illustration is overlaid onto the rendered slide PNG using Puppeteer canvas API
 4. **Verification** (optional): LLM with vision capability evaluates the composited result
 
-This produces illustrations that blend seamlessly with the slide design rather than appearing as separate rectangular blocks.
+This produces illustrations that blend seamlessly with the slide design rather than appearing as separate rectangular
+blocks.
 
 ## LLM integration
 
@@ -161,7 +163,7 @@ await chat(opts, system, userMessage);
 // Vision with image (new)
 await chatVision(opts, system, [
   { type: "text", text: "Evaluate this slide" },
-  { type: "image_url", image_url: { url: "data:image/png;base64,..." } }
+  { type: "image_url", image_url: { url: "data:image/png;base64,..." } },
 ]);
 ```
 
