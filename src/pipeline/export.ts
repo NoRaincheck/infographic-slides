@@ -1,46 +1,53 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import chalk from "chalk";
-import type { PipelineOptions, RenderedSlide, SlideDesignArtifact } from "../utils/types.ts";
-import { artifactPaths } from "../utils/types.ts";
+import type { PipelineOptions, RenderedSlide } from "../utils/types.ts";
 
-export function runExport(
+export async function runExport(
   opts: PipelineOptions,
-  slides: SlideDesignArtifact[],
   rendered: RenderedSlide[],
 ): Promise<void> {
-  if (opts.noEdit) {
-    console.log(chalk.gray("  Post-processing disabled (--no-edit)"));
-    return;
-  }
+  const pdfPath = join(opts.outputDir, "output.pdf");
 
-  const paths = artifactPaths(opts.outputDir);
-  const slidesDir = join(opts.outputDir, "slides");
   if (
     !opts.regenerate.includes("export") &&
     !opts.skip.includes("export") &&
-    existsSync(paths.rendered) &&
-    existsSync(slidesDir)
+    existsSync(pdfPath)
   ) {
-    console.log(chalk.gray("  Using cached render artifacts"));
+    console.log(chalk.gray("  Using cached PDF"));
     return;
   }
 
-  // Only process slides that rendered successfully
-  const successSlides = rendered.filter((r) => r.status === "ok");
+  const successSlides = rendered
+    .filter((r) => r.status === "ok")
+    .sort((a, b) => a.slideIndex - b.slideIndex);
 
-  for (const slide of successSlides) {
-    const slideDesign = slides.find(
-      (s) => s.slideIndex === slide.slideIndex,
-    );
-    if (!slideDesign) continue;
-
-    // Placeholder: In future, LLM could decide per-slide edits
-    // For now, skip unless explicitly enabled
-    console.log(
-      chalk.gray(
-        `  Slide ${slide.slideIndex + 1}: ${slide.path} (no edit applied)`,
-      ),
-    );
+  if (successSlides.length === 0) {
+    console.log(chalk.yellow("  No rendered slides to export"));
+    return;
   }
+
+  const pngPaths = successSlides.map((r) => r.path);
+  for (const p of pngPaths) {
+    if (!existsSync(p)) {
+      console.log(chalk.red(`  Missing slide: ${p}`));
+      return;
+    }
+  }
+
+  console.log(chalk.gray(`  Combining ${pngPaths.length} slides into PDF...`));
+
+  const cmd = new Deno.Command("convert", {
+    args: [...pngPaths, pdfPath],
+    stderr: "piped",
+  });
+
+  const { code, stderr } = await cmd.output();
+
+  if (code !== 0) {
+    const msg = new TextDecoder().decode(stderr);
+    throw new Error(`ImageMagick convert failed (exit ${code}): ${msg}`);
+  }
+
+  console.log(chalk.green(`  PDF saved to ${pdfPath}`));
 }

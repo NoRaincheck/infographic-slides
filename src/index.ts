@@ -14,6 +14,7 @@ import { runSlideDesign } from "./pipeline/slide-design.ts";
 import { runIllustrations } from "./pipeline/illustration.ts";
 import { runRender } from "./pipeline/slide-render.ts";
 import { runThemeSelection } from "./pipeline/theme-select.ts";
+import { runExport } from "./pipeline/export.ts";
 
 function parseList(val: string): string[] {
   return val
@@ -101,6 +102,7 @@ program
     let storyResult: Awaited<ReturnType<typeof runStory>> | undefined;
     let slidesResult: Awaited<ReturnType<typeof runSlideDesign>> | undefined;
     let illusResult: Awaited<ReturnType<typeof runIllustrations>> | undefined;
+    let renderedResult: Awaited<ReturnType<typeof runRender>> | undefined;
 
     stages.push({
       name: "mindmap",
@@ -158,6 +160,7 @@ program
         if (!slidesResult) throw new Error("Slide design must run first");
         if (!illusResult) throw new Error("Illustrations must run first");
         const rendered = await runRender(options, slidesResult, illusResult, themeResult, llmOpts);
+        renderedResult = rendered;
         const ok = rendered.filter((r) => r.status === "ok").length;
         const fail = rendered.filter((r) => r.status === "error").length;
         console.log(chalk.green(`  ${ok} rendered, ${fail} failed`));
@@ -167,10 +170,9 @@ program
     stages.push({
       name: "export",
       label: "Export",
-      // deno-lint-ignore require-await
       run: async () => {
-        // Export is handled inline for now
-        console.log(chalk.gray("  Post-processing (placeholder)"));
+        if (!renderedResult) throw new Error("Render must run first");
+        await runExport(options, renderedResult);
       },
     });
 
