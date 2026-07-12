@@ -82,7 +82,7 @@ When adding a new pipeline stage:
 
 ## Rendering
 
-- `@antv/infographic/ssr` provides `renderToString` for Node.js (no browser needed)
+- `@antv/infographic/ssr` provides `renderToString` (no browser needed)
 - Puppeteer renders the SVG to high-DPI PNG
 - Illustrations are generated with solid backgrounds, backgrounds are removed via BiRefNet, then composited onto
   rendered slides using Puppeteer canvas

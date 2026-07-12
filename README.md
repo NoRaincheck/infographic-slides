@@ -11,7 +11,7 @@ to `output/artifacts/`, and caches it for the next run.
 
 ## Prerequisites
 
-- Node.js 18+
+- Deno 2.0+
 - A local LLM serving OpenAI-compatible chat completions (default: `localhost:1234`)
 - [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) with Flux 2 models (for illustration
   generation)
@@ -59,19 +59,20 @@ Flux 2 via stable-diffusion.cpp CLI:
 
 ## Install
 
+No build step required. Deno caches dependencies on first run.
+
 ```sh
-npm install
-npm run build
+deno task dev --help
 ```
 
 ## Usage
 
 ```sh
 # Basic
-node dist/index.js "The history of quantum computing"
+deno task dev "The history of quantum computing"
 
 # Full options
-node dist/index.js "quantum computing" \
+deno task dev "quantum computing" \
   --slides 8 \
   --output ./quantum-slides \
   --llm-url http://localhost:1234 \
@@ -104,13 +105,13 @@ node dist/index.js "quantum computing" \
 
 ```sh
 # Skip mindmap and story, use cached or fallback
-node dist/index.js "topic" --skip mindmap,story
+deno task dev "topic" --skip mindmap,story
 
 # Regenerate only the slide designs
-node dist/index.js "topic" --regenerate slides
+deno task dev "topic" --regenerate slides
 
 # Resume from illustrations stage
-node dist/index.js "topic" --from illustrations
+deno task dev "topic" --from illustrations
 ```
 
 ## Docs
