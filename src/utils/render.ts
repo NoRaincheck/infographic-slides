@@ -110,31 +110,25 @@ function buildHtmlTextOverlay(
     ? `background: ${theme.css.background}; font-family: ${theme.css.bodyFontFamily}; color: ${theme.css.textColor};`
     : "";
 
-  const headerHtml = text.title
-    ? `<div class="header">${text.title}</div>`
-    : "";
+  const headerHtml = text.title ? `<div class="header">${text.title}</div>` : "";
 
-  const bodyTopHtml = text.bodyTop
-    ? `<div class="body-top">${text.bodyTop}</div>`
-    : "";
+  const bodyTopHtml = text.bodyTop ? `<div class="body-top">${text.bodyTop}</div>` : "";
 
-  const descHtml = text.desc
-    ? `<div class="desc">${text.desc}</div>`
-    : "";
+  const descHtml = text.desc ? `<div class="desc">${text.desc}</div>` : "";
 
   const itemsHtml = text.items.length > 0
-    ? `<div class="body-items">${text.items.map((item) => {
-      const parts: string[] = [];
-      if (item.label) parts.push(`<span class="item-label">${item.label}</span>`);
-      if (item.value) parts.push(`<span class="item-value">${item.value}</span>`);
-      if (item.desc) parts.push(`<span class="item-desc">${item.desc}</span>`);
-      return `<div class="body-item">${parts.join(" ")}</div>`;
-    }).join("\n    ")}</div>`
+    ? `<div class="body-items">${
+      text.items.map((item) => {
+        const parts: string[] = [];
+        if (item.label) parts.push(`<span class="item-label">${item.label}</span>`);
+        if (item.value) parts.push(`<span class="item-value">${item.value}</span>`);
+        if (item.desc) parts.push(`<span class="item-desc">${item.desc}</span>`);
+        return `<div class="body-item">${parts.join(" ")}</div>`;
+      }).join("\n    ")
+    }</div>`
     : "";
 
-  const bodyBottomHtml = text.bodyBottom
-    ? `<div class="body-bottom">${text.bodyBottom}</div>`
-    : "";
+  const bodyBottomHtml = text.bodyBottom ? `<div class="body-bottom">${text.bodyBottom}</div>` : "";
 
   return `
 <!DOCTYPE html>
