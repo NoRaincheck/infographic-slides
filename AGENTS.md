@@ -26,12 +26,14 @@ Verify changes with `npx tsc --noEmit` and `npm test`.
 | File                     | Purpose                                                   |
 | ------------------------ | --------------------------------------------------------- |
 | `src/index.ts`           | CLI entry point, orchestrates pipeline                    |
-| `src/llm.ts`             | LLM client (`chat`, `chatJson`) + skill file loader       |
+| `src/llm.ts`             | LLM client (`chat`, `chatJson`, `chatVision`) + skill loader |
 | `src/prompts/*.ts`       | System/user prompts for each LLM call                     |
 | `src/pipeline/*.ts`      | One file per pipeline stage                               |
 | `src/utils/types.ts`     | Shared interfaces + artifact path helpers                 |
 | `src/utils/render.ts`    | AntV SSR → SVG → Puppeteer → PNG                          |
 | `src/utils/image-gen.ts` | Flux 2 CLI wrapper (generate + edit)                      |
+| `src/utils/bg-removal.ts`| BiRefNet background removal via `uv run`                  |
+| `src/utils/composite.ts` | Transparent illustration overlay via Puppeteer canvas      |
 | `skills/`                | Vendored AntV Infographic skills (prompt context for LLM) |
 | `test/*.test.ts`         | Unit tests (node:test + tsx)                              |
 
@@ -81,7 +83,19 @@ When adding a new pipeline stage:
 
 - `@antv/infographic/ssr` provides `renderToString` for Node.js (no browser needed)
 - Puppeteer renders the SVG to high-DPI PNG
-- Illustrations are embedded as base64 data URIs in the DSL syntax
+- Illustrations are generated with solid backgrounds, backgrounds are removed via BiRefNet, then composited onto rendered slides using Puppeteer canvas
+
+## Illustration pipeline
+
+Illustrations are optional (`--illustrations on|off|auto`). When enabled, the render stage:
+1. Generates illustration with solid-color background (for clean removal)
+2. Removes background via BiRefNet (`uv run models/birefnet_removal.py`)
+3. Renders slide AntV syntax to PNG (no `Illus` component in syntax)
+4. Composites transparent illustration onto slide PNG via Puppeteer canvas
+5. Optionally verifies composited result via LLM vision
+
+Background removal uses Python (via `uv run`) with ONNX runtime. Python dependencies are in `pyproject.toml`.
+The LLM client supports multimodal messages (`chatVision`, `chatJsonVision`) for vision verification.
 
 ## Adding a new pipeline stage
 

@@ -28,6 +28,14 @@ Rules:
 - Aim for 2-4 illustrations across the entire deck
 ${theme && theme.slug !== "vanilla" ? `- Illustration prompts should produce images that visually match the "${theme.name}" theme's color palette and mood` : ""}
 
+Image generation guidelines (MUST follow for all prompts):
+- Always specify a SOLID, FLAT-Color background (e.g. "solid white background", "flat background in #1e293b", "single-color background in #f1f5f9")
+- Use style descriptors: "flat vector illustration", "clean SVG style", "infographic art style", "flat design", "minimal illustration with clean lines"
+- The subject should be a clear, isolated figure or object — a person, device, icon, or concept
+- Avoid: photographic backgrounds, gradients, textures, complex scenes, busy backgrounds
+- Match the theme's color palette for the subject's colors
+- The background must be a single flat color distinct from the subject so it can be cleanly removed
+
 Output format:
 [
   { "slideIndex": 0, "prompt": "A detailed prompt for image generation" },

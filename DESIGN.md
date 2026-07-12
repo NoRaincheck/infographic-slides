@@ -83,9 +83,12 @@ Decides which slides benefit from custom illustrations (typically 2-4 per deck).
 ```
 Input: SlideDesignArtifact[] + IllustrationDecision[]
   → For slides with illustrations:
-      Flux 2 CLI → PNG → base64 → embedded in DSL syntax
-  → AntV SSR renderToString() → SVG string
+      Flux 2 CLI → PNG (solid background)
+      BiRefNet (uv run) → transparent PNG
+  → AntV SSR renderToString() → SVG string (no Illus component)
   → Puppeteer → high-DPI PNG
+  → Composite transparent illustration onto slide PNG (Puppeteer canvas)
+  → Optional: LLM vision verification of composited result
   → output/slides/slide-{n}.png + .svg
   → output/artifacts/05-rendered.json
 ```
@@ -123,20 +126,14 @@ Artifacts are:
 
 ## Illustration embedding
 
-The AntV Infographic DSL supports base64 data URIs for illustrations:
+Illustrations are composited onto slides as transparent overlays:
 
-```infographic
-infographic list-row-horizontal-icon-arrow
-data
-  title Quantum Computing
-  illus data:image/png;base64,iVBORw0KGgo...
-  lists
-    - label Qubits
-      icon atom
-```
+1. **Generation**: Flux 2 CLI produces a PNG with a solid flat-color background
+2. **Background removal**: BiRefNet (via `uv run models/birefnet_removal.py`) removes the background, producing a transparent PNG
+3. **Compositing**: The transparent illustration is overlaid onto the rendered slide PNG using Puppeteer canvas API
+4. **Verification** (optional): LLM with vision capability evaluates the composited result
 
-The `Illus` component in the rendered SVG reads this and displays the image in the designated region. No custom resource
-loader is needed.
+This produces illustrations that blend seamlessly with the slide design rather than appearing as separate rectangular blocks.
 
 ## LLM integration
 
@@ -152,6 +149,23 @@ POST {llmUrl}/v1/chat/completions
   ]
 }
 ```
+
+### Vision support
+
+The LLM client supports multimodal messages for image understanding:
+
+```typescript
+// Plain text (existing)
+await chat(opts, system, userMessage);
+
+// Vision with image (new)
+await chatVision(opts, system, [
+  { type: "text", text: "Evaluate this slide" },
+  { type: "image_url", image_url: { url: "data:image/png;base64,..." } }
+]);
+```
+
+This is used for optional verification of composited illustrations.
 
 ### Skill injection
 

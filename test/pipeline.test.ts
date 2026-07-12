@@ -28,6 +28,8 @@ function baseOpts(dir: string): PipelineOptions {
     imageWidth: 1920,
     imageHeight: 1080,
     noEdit: true,
+    noTitle: false,
+    theme: "auto",
   };
 }
 
@@ -51,12 +53,14 @@ describe("runMindmap", () => {
     assert.equal(result.input, "test topic");
     assert.equal(result.tree.label, "test topic");
     assert.deepEqual(result.tree.children, []);
+    assert.equal(result.theme, "vanilla");
 
     // Should write artifact
     const paths = artifactPaths(dir);
     assert.ok(existsSync(paths.mindmap));
     const artifact = JSON.parse(readFileSync(paths.mindmap, "utf-8"));
     assert.equal(artifact.tree.label, "test topic");
+    assert.equal(artifact.theme, "vanilla");
   });
 
   it("reads cached artifact when it exists", async () => {
@@ -73,6 +77,34 @@ describe("runMindmap", () => {
 
     assert.equal(result.tree.label, "Cached");
     assert.equal(result.input, "cached topic");
+    assert.equal(result.theme, "vanilla");
+  });
+
+  it("uses CLI theme override in mindmap artifact", async () => {
+    const opts = { ...baseOpts(dir), skip: ["mindmap"], theme: "velvet-dark" };
+    const result = await runMindmap(opts, llmOpts);
+
+    assert.equal(result.theme, "velvet-dark");
+
+    const paths = artifactPaths(dir);
+    const artifact = JSON.parse(readFileSync(paths.mindmap, "utf-8"));
+    assert.equal(artifact.theme, "velvet-dark");
+  });
+
+  it("preserves theme from cached artifact", async () => {
+    const paths = artifactPaths(dir);
+    mkdirSync(dir + "/artifacts", { recursive: true });
+    const cached = {
+      input: "topic",
+      tree: { label: "Topic" },
+      theme: "playful",
+    };
+    writeFileSync(paths.mindmap, JSON.stringify(cached));
+
+    const opts = baseOpts(dir);
+    const result = await runMindmap(opts, llmOpts);
+
+    assert.equal(result.theme, "playful");
   });
 
   it("ignores cache when regenerate includes mindmap", async () => {
@@ -125,6 +157,7 @@ describe("runStory", () => {
           { label: "B" },
         ],
       },
+      theme: "vanilla",
     };
 
     const result = await runStory(opts, llmOpts, mindmap);
@@ -148,7 +181,7 @@ describe("runStory", () => {
     };
     writeFileSync(paths.story, JSON.stringify(cached));
 
-    const mindmap = { input: "x", tree: { label: "X" } };
+    const mindmap = { input: "x", tree: { label: "X" }, theme: "vanilla" };
     const result = await runStory(baseOpts(dir), llmOpts, mindmap);
 
     assert.equal(result.storyTitle, "Cached Story");
@@ -157,7 +190,7 @@ describe("runStory", () => {
 
   it("uses default 5 slides when no count specified and skipped", async () => {
     const opts = { ...baseOpts(dir), skip: ["story"] };
-    const mindmap = { input: "t", tree: { label: "T" } };
+    const mindmap = { input: "t", tree: { label: "T" }, theme: "vanilla" };
 
     const result = await runStory(opts, llmOpts, mindmap);
     assert.equal(result.targetSlides, 5);

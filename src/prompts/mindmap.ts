@@ -1,3 +1,5 @@
+import { getThemeSummaries } from "../themes/index.js";
+
 export const MINDMAP_SYSTEM = `You are an expert at breaking down complex topics into hierarchical concept maps.
 Given a topic, produce a JSON mindmap that decomposes it into a tree of concepts.
 
@@ -8,6 +10,10 @@ Rules:
 - Go 2-3 levels deep maximum
 - Aim for 5-15 leaf nodes total
 - Keep labels concise (2-5 words)
+- Include a "theme" field selecting the best visual theme slug from the list below
+
+Available themes:
+${getThemeSummaries()}
 
 Output format:
 {
@@ -17,7 +23,8 @@ Output format:
       { "label": "Sub-topic 1", "children": [...] },
       { "label": "Sub-topic 2" }
     ]
-  }
+  },
+  "theme": "vanilla"
 }`;
 
 export function mindmapUser(

@@ -7,6 +7,7 @@ import type { PipelineOptions, StageName } from "./utils/types.js";
 import { STAGE_NAMES } from "./utils/types.js";
 import type { LLMOptions } from "./llm.js";
 import type { Theme } from "./themes/types.js";
+import { getTheme } from "./themes/index.js";
 import { runMindmap } from "./pipeline/mindmap.js";
 import { runStory } from "./pipeline/story.js";
 import { runSlideDesign } from "./pipeline/slide-design.js";
@@ -157,7 +158,7 @@ program
       run: async () => {
         if (!slidesResult) throw new Error("Slide design must run first");
         if (!illusResult) throw new Error("Illustrations must run first");
-        const rendered = await runRender(options, slidesResult, illusResult, themeResult);
+        const rendered = await runRender(options, slidesResult, illusResult, themeResult, llmOpts);
         const ok = rendered.filter((r) => r.status === "ok").length;
         const fail = rendered.filter((r) => r.status === "error").length;
         console.log(chalk.green(`  ${ok} rendered, ${fail} failed`));
@@ -181,19 +182,45 @@ program
       chalk.bold(`\nInfographic Slides: ${inputLabel}\n`),
     );
 
-    // Theme selection (pre-step, runs before all stages)
-    if (fromIndex === 0) {
+    // Theme resolution:
+    // 1. CLI --theme <slug> overrides everything
+    // 2. Mindmap artifact's theme is used when CLI is "auto"
+    // 3. LLM theme selection as final fallback
+    if (options.theme && options.theme !== "auto") {
       console.log(chalk.bold("[1/theme] Theme"));
+      console.log(chalk.gray(`  Using CLI theme: ${options.theme}`));
+      themeResult = getTheme(options.theme);
+    } else if (fromIndex === 0) {
+      // Run mindmap first so we can read its theme
+      console.log(chalk.bold(`[1/${stages.length}] Mindmap`));
       try {
-        themeResult = await runThemeSelection(options, llmOpts);
+        const mindmapStage = stages.find((s) => s.name === "mindmap")!;
+        await mindmapStage.run();
       } catch (err) {
         console.log(chalk.red(`  Failed: ${(err as Error).message}`));
         process.exit(1);
       }
+
+      // Use mindmap's theme (LLM picked it) if available
+      if (mindmapResult?.theme && mindmapResult.theme !== "auto") {
+        console.log(chalk.gray(`  Using mindmap theme: ${mindmapResult.theme}`));
+        themeResult = getTheme(mindmapResult.theme);
+      } else {
+        // Fallback to LLM theme selection
+        console.log(chalk.bold("[theme] Theme"));
+        try {
+          themeResult = await runThemeSelection(options, llmOpts);
+        } catch (err) {
+          console.log(chalk.red(`  Failed: ${(err as Error).message}`));
+          process.exit(1);
+        }
+      }
     }
 
+    // Run remaining stages (skip mindmap if already ran above)
     for (let i = Math.max(0, fromIndex); i < stages.length; i++) {
       const stage = stages[i];
+      if (stage.name === "mindmap" && mindmapResult) continue;
       console.log(chalk.bold(`[${i + 1}/${stages.length}] ${stage.label}`));
 
       try {

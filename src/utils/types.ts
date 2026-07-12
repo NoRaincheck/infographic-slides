@@ -6,6 +6,7 @@ export interface MindmapNode {
 export interface MindmapArtifact {
   input: string;
   tree: MindmapNode;
+  theme: string;
 }
 
 export interface StorySlide {

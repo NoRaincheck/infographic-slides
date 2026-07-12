@@ -17,9 +17,21 @@ function findProjectRoot(): string {
 
 const PROJECT_ROOT = findProjectRoot();
 
+export interface TextContent {
+  type: "text";
+  text: string;
+}
+
+export interface ImageContent {
+  type: "image_url";
+  image_url: { url: string };
+}
+
+export type MultimodalContent = TextContent | ImageContent;
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | MultimodalContent[];
 }
 
 export interface LLMOptions {
@@ -190,6 +202,69 @@ export async function chatJson<T>(
         console.log(
           chalk.yellow(
             `  Attempt ${attempt}/${maxAttempts} failed, retrying... (${(err as Error).message})`,
+          ),
+        );
+      }
+    }
+  }
+  throw lastError;
+}
+
+export async function chatVision(
+  opts: LLMOptions,
+  systemPrompt: string,
+  userParts: MultimodalContent[],
+): Promise<string> {
+  const response = await fetch(`${opts.url}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: opts.model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userParts },
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`LLM vision request failed (${response.status}): ${text}`);
+  }
+
+  const data = (await response.json()) as {
+    choices: { message: { content: string } }[];
+  };
+
+  return data.choices[0].message.content;
+}
+
+export async function chatJsonVision<T>(
+  opts: LLMOptions,
+  systemPrompt: string,
+  userParts: MultimodalContent[],
+  jsonOpts?: ChatJsonOptions,
+): Promise<T> {
+  const maxAttempts = 1 + (jsonOpts?.retries ?? 2);
+  const validate = jsonOpts?.validate;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const raw = await chatVision(opts, systemPrompt, userParts);
+    const jsonStr = extractJson(raw);
+    try {
+      const parsed = JSON.parse(jsonStr) as T;
+      if (validate) {
+        validate(parsed);
+      }
+      return parsed;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts) {
+        console.log(
+          chalk.yellow(
+            `  Vision attempt ${attempt}/${maxAttempts} failed, retrying... (${(err as Error).message})`,
           ),
         );
       }

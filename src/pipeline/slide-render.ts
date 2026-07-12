@@ -5,13 +5,18 @@ import type { IllustrationDecision, PipelineOptions, RenderedSlide, SlideDesignA
 import type { Theme } from "../themes/types.js";
 import { artifactPaths } from "../utils/types.js";
 import { generateImage } from "../utils/image-gen.js";
+import { removeBackground } from "../utils/bg-removal.js";
+import { compositeIllustration } from "../utils/composite.js";
 import { renderSyntaxToPng } from "../utils/render.js";
+import { chatJsonVision, type LLMOptions } from "../llm.js";
+import { illustrationVerifySystem, illustrationVerifyUser, type IllustrationVerdict } from "../prompts/illustration-verify.js";
 
 export async function runRender(
   opts: PipelineOptions,
   slides: SlideDesignArtifact[],
   illustrations: IllustrationDecision[],
   theme?: Theme,
+  llmOpts?: LLMOptions,
 ): Promise<RenderedSlide[]> {
   const paths = artifactPaths(opts.outputDir);
   const slidesDir = join(opts.outputDir, "slides");
@@ -52,46 +57,51 @@ export async function runRender(
       syntax = syntax.replace(/^ +title [^\n]*\n?/m, "");
     }
     const illusDecision = illustrations.find((d) => d.slideIndex === idx);
+    const hasIllustration = illusDecision?.prompt && opts.illustrations !== "off";
 
-    if (illusDecision?.prompt && opts.illustrations !== "off") {
+    // Generate and prepare illustration if needed
+    let transparentIllusPath: string | undefined;
+    if (hasIllustration) {
       const illusPath = join(illusDir, `slide-${slideNum}-illus.png`);
+      const transparentPath = join(illusDir, `slide-${slideNum}-illus-transparent.png`);
+
       if (!existsSync(illusPath)) {
         console.log(chalk.gray(`    Generating illustration...`));
         try {
           await generateImage({
-            prompt: illusDecision.prompt,
+            prompt: illusDecision!.prompt!,
             outputPath: illusPath,
             width: 512,
             height: 512,
           });
         } catch (err) {
           console.log(
-            chalk.yellow(`    Illustration failed: ${(err as Error).message}`),
+            chalk.yellow(`    Illustration generation failed: ${(err as Error).message}`),
           );
-          results.push({
-            slideIndex: idx,
-            status: "ok",
-            path: pngPath,
-          });
-          continue;
         }
       } else {
         console.log(chalk.gray(`    Using cached illustration`));
       }
 
-      // Embed illustration as base64 in syntax
-      const illusBuffer = readBinary(illusPath);
-      const base64 = illusBuffer.toString("base64");
-      const dataUri = `data:image/png;base64,${base64}`;
-
-      // Add illus to data block
-      syntax = syntax.replace(
-        /(\ntheme)/,
-        `\n  illus ${dataUri}$1`,
-      );
+      if (existsSync(illusPath)) {
+        if (!existsSync(transparentPath)) {
+          console.log(chalk.gray(`    Removing background...`));
+          try {
+            await removeBackground({ inputPath: illusPath, outputPath: transparentPath });
+            transparentIllusPath = transparentPath;
+          } catch (err) {
+            console.log(
+              chalk.yellow(`    Background removal failed: ${(err as Error).message}`),
+            );
+          }
+        } else {
+          console.log(chalk.gray(`    Using cached transparent illustration`));
+          transparentIllusPath = transparentPath;
+        }
+      }
     }
 
-    // Render with AntV SSR
+    // Render slide with AntV SSR (no Illus in syntax)
     try {
       const { pngPath: renderedPng, svgPath } = await renderSyntaxToPng({
         syntax,
@@ -102,13 +112,54 @@ export async function runRender(
         htmlText: opts.htmlText,
       });
 
+      // Composite transparent illustration onto rendered slide
+      let finalPng = renderedPng;
+      if (transparentIllusPath && existsSync(transparentIllusPath)) {
+        console.log(chalk.gray(`    Compositing illustration...`));
+        try {
+          const compositedPath = join(slidesDir, `slide-${slideNum}-composited.png`);
+          await compositeIllustration({
+            slidePng: renderedPng,
+            illustrationPng: transparentIllusPath,
+            outputPath: compositedPath,
+          });
+          finalPng = compositedPath;
+        } catch (err) {
+          console.log(
+            chalk.yellow(`    Compositing failed: ${(err as Error).message}`),
+          );
+        }
+      }
+
+      // Optional LLM vision verification
+      if (finalPng !== renderedPng && llmOpts && !opts.acceptAll) {
+        try {
+          const compositedBuf = readBinary(finalPng);
+          const compositedB64 = compositedBuf.toString("base64");
+          const verdict = await chatJsonVision<IllustrationVerdict>(
+            llmOpts,
+            illustrationVerifySystem(),
+            illustrationVerifyUser(slide.title, compositedB64),
+          );
+          if (!verdict.ok) {
+            console.log(
+              chalk.yellow(`    Illustration issues: ${verdict.issues}`),
+            );
+          }
+        } catch (err) {
+          console.log(
+            chalk.gray(`    Vision verification skipped: ${(err as Error).message}`),
+          );
+        }
+      }
+
       results.push({
         slideIndex: idx,
         status: "ok",
-        path: renderedPng,
+        path: finalPng,
         svgPath,
-        ...(illusDecision?.prompt && opts.illustrations !== "off"
-          ? { illustration: join(illusDir, `slide-${slideNum}-illus.png`) }
+        ...(hasIllustration
+          ? { illustration: transparentIllusPath ?? join(illusDir, `slide-${slideNum}-illus.png`) }
           : {}),
       });
     } catch (err) {

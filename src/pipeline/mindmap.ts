@@ -9,18 +9,32 @@ import { MINDMAP_SYSTEM, mindmapUser } from "../prompts/mindmap.js";
 function normalizeMindmap(
   raw: Record<string, unknown>,
   fallbackInput: string,
+  cliTheme?: string,
 ): MindmapArtifact {
   const input = typeof raw.input === "string" ? raw.input : fallbackInput;
   const candidate = (raw.tree ?? raw) as Record<string, unknown> | undefined;
+  let tree: MindmapNode;
   if (
     candidate &&
     typeof candidate === "object" &&
     "label" in candidate &&
     typeof candidate.label === "string"
   ) {
-    return { input, tree: candidate as unknown as MindmapNode };
+    tree = candidate as unknown as MindmapNode;
+  } else {
+    tree = { label: input, children: [] };
   }
-  return { input, tree: { label: input, children: [] } };
+
+  let theme: string;
+  if (cliTheme && cliTheme !== "auto") {
+    theme = cliTheme;
+  } else if (typeof raw.theme === "string" && raw.theme !== "auto") {
+    theme = raw.theme;
+  } else {
+    theme = "vanilla";
+  }
+
+  return { input, tree, theme };
 }
 
 export async function runMindmap(
@@ -38,7 +52,7 @@ export async function runMindmap(
     const cached = JSON.parse(
       readFileSync(paths.mindmap, "utf-8"),
     ) as Record<string, unknown>;
-    return normalizeMindmap(cached, opts.input);
+    return normalizeMindmap(cached, opts.input, opts.theme);
   }
 
   if (opts.skip.includes("mindmap")) {
@@ -46,6 +60,7 @@ export async function runMindmap(
     const artifact: MindmapArtifact = {
       input: opts.input,
       tree: { label: opts.input, children: [] },
+      theme: opts.theme && opts.theme !== "auto" ? opts.theme : "vanilla",
     };
     mkdirSync(dirname(paths.mindmap), { recursive: true });
     writeFileSync(paths.mindmap, JSON.stringify(artifact, null, 2));
@@ -69,7 +84,7 @@ export async function runMindmap(
       },
     );
 
-    const artifact = normalizeMindmap(raw, opts.input);
+    const artifact = normalizeMindmap(raw, opts.input, opts.theme);
     mkdirSync(dirname(paths.mindmap), { recursive: true });
     writeFileSync(paths.mindmap, JSON.stringify(artifact, null, 2));
     return artifact;
@@ -79,6 +94,7 @@ export async function runMindmap(
     const artifact: MindmapArtifact = {
       input: opts.input,
       tree: { label: opts.input, children: [] },
+      theme: opts.theme && opts.theme !== "auto" ? opts.theme : "vanilla",
     };
     mkdirSync(dirname(paths.mindmap), { recursive: true });
     writeFileSync(paths.mindmap, JSON.stringify(artifact, null, 2));
