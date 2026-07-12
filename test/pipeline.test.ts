@@ -16,6 +16,7 @@ function tmpDir(): string {
 function baseOpts(dir: string): PipelineOptions {
   return {
     input: "test topic",
+    inputSource: "text",
     outputDir: dir,
     llmUrl: "http://localhost:1234",
     model: "test",

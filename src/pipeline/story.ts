@@ -46,7 +46,7 @@ export async function runStory(
   const artifact = await chatJson<StoryArtifact>(
     llmOpts,
     STORY_SYSTEM,
-    storyUser(mindmap.tree, opts.slides)
+    storyUser(mindmap.tree, opts.slides, opts.inputSource, opts.input)
   );
 
   mkdirSync(dirname(paths.story), { recursive: true });

@@ -2,7 +2,7 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import type { PipelineOptions, StageName } from "./utils/types.js";
 import { STAGE_NAMES } from "./utils/types.js";
 import type { LLMOptions } from "./llm.js";
@@ -25,7 +25,7 @@ const program = new Command();
 program
   .name("infographic-slides")
   .description("Generate infographic slide decks from text using local LLMs")
-  .argument("<input>", "Topic or text content to create slides from")
+  .argument("<input>", "Topic text, or path to a .txt/.md file")
   .option("-s, --slides <n>", "Target number of slides", (v) => Number.parseInt(v, 10))
   .option("-o, --output <dir>", "Output directory", "./output")
   .option("--llm-url <url>", "LLM API base URL", "http://localhost:1234")
@@ -48,8 +48,24 @@ program
   .option("--image-height <px>", "Slide image height", (v) => Number.parseInt(v, 10), 1080)
   .option("--no-edit", "Disable post-processing image edits")
   .action(async (input: string, opts: Record<string, unknown>) => {
+    let inputText: string;
+    let inputSource: "text" | "file";
+
+    if (
+      existsSync(input) &&
+      statSync(input).isFile()
+    ) {
+      inputText = readFileSync(input, "utf-8");
+      inputSource = "file";
+      console.log(chalk.gray(`  Read input from file: ${input}`));
+    } else {
+      inputText = input;
+      inputSource = "text";
+    }
+
     const options: PipelineOptions = {
-      input,
+      input: inputText,
+      inputSource,
       slides: opts.slides as number | undefined,
       outputDir: opts.output as string,
       llmUrl: opts.llmUrl as string,
@@ -154,8 +170,10 @@ program
       ? stages.findIndex((s) => s.name === options.from)
       : 0;
 
+    const inputLabel =
+      inputSource === "file" ? `${input} (file)` : `"${options.input}"`;
     console.log(
-      chalk.bold(`\nInfographic Slides: "${options.input}"\n`)
+      chalk.bold(`\nInfographic Slides: ${inputLabel}\n`)
     );
 
     for (let i = Math.max(0, fromIndex); i < stages.length; i++) {

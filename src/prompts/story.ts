@@ -27,10 +27,25 @@ Output format:
 
 export function storyUser(
   tree: MindmapNode,
-  slideCount?: number
+  slideCount?: number,
+  inputSource?: "text" | "file",
+  rawInput?: string
 ): string {
   const hint = slideCount
     ? `The user wants approximately ${slideCount} slides.`
     : "Choose an appropriate number of slides (5-12).";
-  return `Here is the mindmap:\n${JSON.stringify(tree, null, 2)}\n\n${hint}\nPlan the story.`;
+  let msg = `Here is the mindmap:\n${JSON.stringify(tree, null, 2)}\n\n${hint}\nPlan the story.`;
+  if (inputSource === "file" && rawInput) {
+    msg = `The user provided structured content for this presentation. Use it as the primary source, respecting their structure and instructions where they exist.
+
+Original content:
+${rawInput}
+
+Mindmap extracted from the content:
+${JSON.stringify(tree, null, 2)}
+
+${hint}
+Plan the story, staying faithful to the user's content and structure.`;
+  }
+  return msg;
 }

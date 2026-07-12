@@ -27,6 +27,19 @@ describe("mindmap prompts", () => {
     const msg = mindmapUser("AI");
     assert.ok(!msg.includes("Target approximately"));
   });
+
+  it("mindmapUser uses file-aware prompt when inputSource is file", () => {
+    const content = "# My Topic\n\n## Section 1\n- Point A\n- Point B";
+    const msg = mindmapUser(content, undefined, "file");
+    assert.ok(msg.includes("user's content"));
+    assert.ok(msg.includes("respects the existing structure"));
+    assert.ok(msg.includes("Section 1"));
+  });
+
+  it("mindmapUser falls back to inline prompt for text source", () => {
+    const msg = mindmapUser("topic", undefined, "text");
+    assert.ok(msg.includes('Create a mindmap for: "topic"'));
+  });
 });
 
 describe("story prompts", () => {
@@ -54,6 +67,22 @@ describe("story prompts", () => {
     const tree = { label: "Root" };
     const msg = storyUser(tree);
     assert.ok(msg.includes("5-12"));
+  });
+
+  it("storyUser includes raw content when inputSource is file", () => {
+    const tree = { label: "Root" };
+    const raw = "# My Presentation\n\n## Intro\nWelcome\n\n## Data\nResults here";
+    const msg = storyUser(tree, 5, "file", raw);
+    assert.ok(msg.includes("user provided structured content"));
+    assert.ok(msg.includes("My Presentation"));
+    assert.ok(msg.includes("respecting their structure"));
+  });
+
+  it("storyUser uses standard prompt for text source", () => {
+    const tree = { label: "Root" };
+    const msg = storyUser(tree, 5, "text");
+    assert.ok(msg.includes("Here is the mindmap"));
+    assert.ok(!msg.includes("structured content"));
   });
 });
 

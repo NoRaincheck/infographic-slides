@@ -36,7 +36,7 @@ export async function runMindmap(
   const artifact = await chatJson<MindmapArtifact>(
     llmOpts,
     MINDMAP_SYSTEM,
-    mindmapUser(opts.input, opts.slides)
+    mindmapUser(opts.input, opts.slides, opts.inputSource)
   );
 
   artifact.input = opts.input;

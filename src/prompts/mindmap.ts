@@ -18,9 +18,19 @@ Output format:
   ]
 }`;
 
-export function mindmapUser(input: string, slideCount?: number): string {
+export function mindmapUser(
+  input: string,
+  slideCount?: number,
+  inputSource?: "text" | "file"
+): string {
   const hint = slideCount
     ? `\nTarget approximately ${slideCount} slides worth of content.`
     : "";
+  if (inputSource === "file") {
+    return `Here is the user's content. Create a mindmap that respects the existing structure and instructions where present.
+
+Content:
+${input}${hint}`;
+  }
   return `Create a mindmap for: "${input}"${hint}`;
 }

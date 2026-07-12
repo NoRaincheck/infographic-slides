@@ -43,6 +43,7 @@ export interface RenderedSlide {
 
 export interface PipelineOptions {
   input: string;
+  inputSource: "text" | "file";
   slides?: number;
   outputDir: string;
   llmUrl: string;
