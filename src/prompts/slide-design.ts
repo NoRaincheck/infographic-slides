@@ -6,9 +6,19 @@ export function slideDesignSystem(theme?: Theme): string {
   const syntaxSkill = SKILLS.infographicSyntaxCreator();
   const syntaxRef = SKILLS.infographicSyntaxPrompt();
 
+  const schemeHint =
+    theme?.scheme === "dark"
+      ? "Scheme: dark — use dark backgrounds with light/bright text throughout. All slide backgrounds must be dark."
+      : theme?.scheme === "mixed"
+        ? "Scheme: mixed — the outer background is light, but use dark accent blocks (from the palette) for key callouts and highlights. Alternate between light and dark blocks."
+        : theme?.scheme === "light"
+          ? "Scheme: light — use light/white backgrounds with dark text. Accent colors from the palette should appear on cards, callouts, and highlights."
+          : "";
+
   const themeBlock =
     theme && theme.slug !== "vanilla"
       ? `\nTHEME: "${theme.name}" (${theme.description})
+${schemeHint}
 Use this palette for every slide's theme block: ${theme.palette.join(" ")}
 Use this font-family in the theme block: ${theme.fontFamily}
 ${theme.layoutHints}

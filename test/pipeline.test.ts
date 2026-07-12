@@ -259,6 +259,36 @@ describe("runSlideDesign", () => {
 
     assert.ok(result[0].syntax.includes("#3b82f6 #8b5cf6 #f97316"), "Should use default palette");
   });
+
+  it("includes font-family in skip fallback when theme has fontFamily", async () => {
+    const opts = { ...baseOpts(dir), skip: ["slides"] };
+    const story = {
+      storyTitle: "Test",
+      targetSlides: 1,
+      slides: [
+        { title: "Slide One", description: "First", keyPoints: ["a"] },
+      ],
+    };
+    const theme: Theme = {
+      slug: "velvet-dark",
+      name: "Velvet Dark",
+      description: "Deep navy",
+      palette: ["#f0d060", "#0f1b3d"],
+      fontFamily: "'Cormorant Garamond', serif",
+      css: { background: "#0f1b3d", textColor: "#f0d060", fontImports: "", bodyFontFamily: "serif" },
+      preferredLayouts: [],
+      avoidLayouts: [],
+      layoutHints: "",
+      mood: ["dark"],
+      formality: "high",
+      scheme: "dark",
+    };
+
+    const result = await runSlideDesign(opts, llmOpts, story, theme);
+
+    assert.ok(result[0].syntax.includes("'Cormorant Garamond', serif"), "Should include font-family in syntax");
+    assert.ok(result[0].syntax.includes("base"), "Should include base block for font");
+  });
 });
 
 describe("runIllustrations", () => {

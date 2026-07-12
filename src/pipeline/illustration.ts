@@ -2,14 +2,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import chalk from "chalk";
 import type { IllustrationDecision, PipelineOptions, SlideDesignArtifact } from "../utils/types.js";
+import type { Theme } from "../themes/types.js";
 import { artifactPaths } from "../utils/types.js";
 import { chatJson, type LLMOptions } from "../llm.js";
-import { ILLUSTRATION_SYSTEM, illustrationUser } from "../prompts/illustration.js";
+import { illustrationSystem, illustrationUser } from "../prompts/illustration.js";
 
 export async function runIllustrations(
   opts: PipelineOptions,
   llmOpts: LLMOptions,
   slides: SlideDesignArtifact[],
+  theme?: Theme,
 ): Promise<IllustrationDecision[]> {
   const paths = artifactPaths(opts.outputDir);
 
@@ -42,7 +44,7 @@ export async function runIllustrations(
   console.log(chalk.cyan("  Calling LLM..."));
   const decisions = await chatJson<IllustrationDecision[]>(
     llmOpts,
-    ILLUSTRATION_SYSTEM,
+    illustrationSystem(theme),
     illustrationUser(slides),
     {
       validate: (val) => {

@@ -12,6 +12,8 @@ export interface TextItem {
   height: number;
   html: string;
   spanStyle: string;
+  horizontalAlign: "left" | "center" | "right";
+  verticalAlign: "top" | "middle" | "bottom";
 }
 
 export interface RenderOptions {
@@ -75,7 +77,15 @@ function buildHtmlTextOverlay(
       const top = (item.y - svgViewBox.y) * scaleY;
       const w = item.width * scaleX;
       const h = item.height * scaleY;
-      return `<div class="text-item" style="position:absolute;left:${left}px;top:${top}px;width:${w}px;height:${h}px;">${item.html}</div>`;
+      const justifyMap = { left: "flex-start", center: "center", right: "flex-end" };
+      const alignMap = { top: "flex-start", middle: "center", bottom: "flex-end" };
+      const textAlignMap = { left: "left", center: "center", right: "right" };
+      const alignmentStyle =
+        `justify-content:${justifyMap[item.horizontalAlign]};` +
+        `align-items:${alignMap[item.verticalAlign]};` +
+        `align-content:${alignMap[item.verticalAlign]};` +
+        `text-align:${textAlignMap[item.horizontalAlign]};`;
+      return `<div class="text-item" style="position:absolute;left:${left}px;top:${top}px;width:${w}px;height:${h}px;${alignmentStyle}">${item.html}</div>`;
     })
     .join("\n    ");
 
@@ -143,6 +153,8 @@ async function extractTextItems(
       height: number;
       html: string;
       spanStyle: string;
+      horizontalAlign: string;
+      verticalAlign: string;
     }> = [];
 
     const foreignObjects = svgEl.querySelectorAll("foreignObject");
@@ -157,6 +169,23 @@ async function extractTextItems(
       const spanStyle = span.getAttribute("style") || "";
       const text = span.textContent || "";
 
+      let horizontalAlign = "left";
+      let verticalAlign = "top";
+
+      const justifyMatch = spanStyle.match(/justify-content:\s*([^;]+);/);
+      if (justifyMatch) {
+        const v = justifyMatch[1].trim();
+        if (v === "center") horizontalAlign = "center";
+        else if (v === "flex-end") horizontalAlign = "right";
+      }
+
+      const alignContentMatch = spanStyle.match(/align-content:\s*([^;]+);/);
+      if (alignContentMatch) {
+        const v = alignContentMatch[1].trim();
+        if (v === "center") verticalAlign = "middle";
+        else if (v === "flex-end") verticalAlign = "bottom";
+      }
+
       const cleanStyle = spanStyle
         .replace(/width:\s*100%;/g, "")
         .replace(/height:\s*100%;/g, "")
@@ -166,7 +195,7 @@ async function extractTextItems(
         .replace(/justify-content:\s*[^;]+;/g, "")
         .replace(/align-content:\s*[^;]+;/g, "")
         .replace(/align-items:\s*[^;]+;/g, "")
-        .replace(/text-align:\s*[^;]+;/g, "text-align: center;");
+        .replace(/text-align:\s*[^;]+;/g, "");
 
       const scaleX = svgRect.width > 0 ? svgEl.viewBox.baseVal.width / svgRect.width : 1;
       const scaleY = svgRect.height > 0 ? svgEl.viewBox.baseVal.height / svgRect.height : 1;
@@ -178,6 +207,8 @@ async function extractTextItems(
         height: rect.height * scaleY,
         html: `<span style="${cleanStyle}">${text}</span>`,
         spanStyle: cleanStyle,
+        horizontalAlign,
+        verticalAlign,
       });
 
       fo.remove();
@@ -189,7 +220,7 @@ async function extractTextItems(
     return { textItems, cleanedSvg };
   });
 
-  return result;
+  return result as { textItems: TextItem[]; cleanedSvg: string };
 }
 
 export async function renderSyntaxToPng(

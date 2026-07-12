@@ -26,7 +26,7 @@ export async function runSlideDesign(
 
   if (opts.skip.includes("slides")) {
     console.log(chalk.yellow("  Skipped — generating minimal slide designs"));
-    const palette = theme && theme.slug !== "vanilla" ? theme.palette.join(" ") : "#3b82f6 #8b5cf6 #f97316";
+    const palette = theme?.palette.join(" ") ?? "#3b82f6 #8b5cf6 #f97316";
     const artifacts: SlideDesignArtifact[] = story.slides.map((s, i) => ({
       slideIndex: i,
       title: s.title,
@@ -39,6 +39,9 @@ export async function runSlideDesign(
         ...s.keyPoints.map((kp) => `    - label ${kp}\n      icon star`),
         "theme",
         `  palette ${palette}`,
+        ...(theme && theme.slug !== "vanilla"
+          ? [`  base`, `    text`, `      font-family ${theme.fontFamily}`]
+          : []),
       ].join("\n"),
     }));
     mkdirSync(dirname(paths.slideDesign), { recursive: true });

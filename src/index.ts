@@ -145,7 +145,7 @@ program
       label: "Illustrations",
       run: async () => {
         if (!slidesResult) throw new Error("Slide design must run first");
-        illusResult = await runIllustrations(options, llmOpts, slidesResult);
+        illusResult = await runIllustrations(options, llmOpts, slidesResult, themeResult);
         const count = illusResult.filter((d) => d.prompt !== null).length;
         console.log(chalk.green(`  ${count} illustrations planned`));
       },

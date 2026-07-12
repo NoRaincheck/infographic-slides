@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { MINDMAP_SYSTEM, mindmapUser } from "../src/prompts/mindmap.js";
 import { STORY_SYSTEM, storyUser } from "../src/prompts/story.js";
-import { ILLUSTRATION_SYSTEM, illustrationUser } from "../src/prompts/illustration.js";
+import { illustrationSystem, illustrationUser } from "../src/prompts/illustration.js";
 import { slideDesignSystem, slideDesignUser } from "../src/prompts/slide-design.js";
 import { THEME_SELECTION_SYSTEM, themeSelectionUser } from "../src/prompts/theme-selection.js";
 import type { SlideDesignArtifact } from "../src/utils/types.js";
@@ -89,9 +89,51 @@ describe("story prompts", () => {
 });
 
 describe("illustration prompts", () => {
-  it("ILLUSTRATION_SYSTEM includes output format", () => {
-    assert.ok(ILLUSTRATION_SYSTEM.includes('"slideIndex"'));
-    assert.ok(ILLUSTRATION_SYSTEM.includes('"prompt"'));
+  it("illustrationSystem includes output format", () => {
+    const sys = illustrationSystem();
+    assert.ok(sys.includes('"slideIndex"'));
+    assert.ok(sys.includes('"prompt"'));
+  });
+
+  it("illustrationSystem includes theme context for dark themes", () => {
+    const darkTheme: Theme = {
+      slug: "velvet-dark",
+      name: "Velvet Dark",
+      description: "Deep navy canvas",
+      palette: ["#f0d060", "#0f1b3d"],
+      fontFamily: "'Cormorant Garamond', serif",
+      css: { background: "#0f1b3d", textColor: "#f0d060", fontImports: "", bodyFontFamily: "serif" },
+      preferredLayouts: [],
+      avoidLayouts: [],
+      layoutHints: "",
+      mood: ["dark"],
+      formality: "high",
+      scheme: "dark",
+    };
+    const sys = illustrationSystem(darkTheme);
+    assert.ok(sys.includes("dark background"));
+    assert.ok(sys.includes("dark"));
+    assert.ok(sys.includes("Velvet Dark"));
+    assert.ok(sys.includes("Avoid bright white backgrounds"));
+  });
+
+  it("illustrationSystem omits theme context for vanilla", () => {
+    const vanilla: Theme = {
+      slug: "vanilla",
+      name: "Vanilla",
+      description: "Default",
+      palette: ["#3b82f6"],
+      fontFamily: "sans-serif",
+      css: { background: "#fff", textColor: "#000", fontImports: "", bodyFontFamily: "sans-serif" },
+      preferredLayouts: [],
+      avoidLayouts: [],
+      layoutHints: "",
+      mood: [],
+      formality: "medium",
+      scheme: "light",
+    };
+    const sys = illustrationSystem(vanilla);
+    assert.ok(!sys.includes("Theme context"));
   });
 
   it("illustrationUser serializes slide info", () => {
@@ -142,6 +184,27 @@ describe("slide design prompts", () => {
     assert.ok(sys.includes("Test layout hints"));
     assert.ok(sys.includes("list-row-horizontal-icon-arrow"));
     assert.ok(sys.includes("chart-line-horizontal"));
+    assert.ok(sys.includes("Scheme: light"));
+  });
+
+  it("slideDesignSystem includes dark scheme guidance for dark themes", () => {
+    const theme: Theme = {
+      slug: "velvet-dark",
+      name: "Velvet Dark",
+      description: "Deep navy canvas",
+      palette: ["#f0d060", "#0f1b3d"],
+      fontFamily: "'Cormorant Garamond', serif",
+      css: { background: "#0f1b3d", textColor: "#f0d060", fontImports: "", bodyFontFamily: "serif" },
+      preferredLayouts: [],
+      avoidLayouts: [],
+      layoutHints: "",
+      mood: ["dark"],
+      formality: "high",
+      scheme: "dark",
+    };
+    const sys = slideDesignSystem(theme);
+    assert.ok(sys.includes("Scheme: dark"));
+    assert.ok(sys.includes("dark backgrounds with light/bright text"));
   });
 
   it("slideDesignSystem omits theme block for vanilla", () => {
