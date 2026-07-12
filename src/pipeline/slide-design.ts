@@ -60,6 +60,21 @@ export async function runSlideDesign(
           if (typeof slide.title !== "string") throw new Error("slide missing title");
           if (typeof slide.template !== "string") throw new Error("slide missing template");
           if (typeof slide.syntax !== "string") throw new Error("slide missing syntax");
+          if (slide.bodyTop !== undefined && typeof slide.bodyTop !== "string") {
+            throw new Error("slide bodyTop must be a string");
+          }
+          if (slide.bodyBottom !== undefined && typeof slide.bodyBottom !== "string") {
+            throw new Error("slide bodyBottom must be a string");
+          }
+          if (slide.bodyTop && slide.bodyBottom) {
+            throw new Error("slide has both bodyTop and bodyBottom — only one allowed");
+          }
+          const descMatch = (slide.syntax as string).match(/^\s{2}desc\s+(.+)$/m);
+          if (descMatch && descMatch[1].trim().length > 60) {
+            throw new Error(
+              `desc field too long (${descMatch[1].trim().length} chars, max 60) — use bodyTop or bodyBottom instead`,
+            );
+          }
         }
         const templates = (val as SlideDesignArtifact[]).map((s) => s.template);
         if (templates.length > 1 && new Set(templates).size === 1) {

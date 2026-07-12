@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run -RWE src/index.ts",
+    "dev": "deno run -A src/index.ts",
     "build": "deno compile -A --output dist/infographic-slides src/index.ts",
     "test": "deno test -A",
     "check": "deno check src/index.ts",
@@ -11,6 +11,7 @@
     "chalk": "npm:chalk@^5.3.0",
     "commander": "npm:commander@^12.1.0",
     "puppeteer": "npm:puppeteer@^23.0.0",
+    "@antv/infographic": "npm:@antv/infographic@^0.2.19",
     "@antv/infographic/ssr": "npm:@antv/infographic@^0.2.19/ssr"
   },
   "nodeModulesDir": "auto",

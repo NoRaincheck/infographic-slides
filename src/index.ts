@@ -35,7 +35,7 @@ program
   .option(
     "--illustrations <mode>",
     "Illustration generation: on, off, auto",
-    "auto",
+    "off",
   )
   .option("-y, --accept-all", "Auto-accept all LLM outputs", false)
   .option("--skip <stages>", "Skip stages (comma-separated)", parseList, [])
@@ -46,8 +46,8 @@ program
     [],
   )
   .option("--from <stage>", "Resume from a specific stage")
-  .option("--image-width <px>", "Slide image width", (v) => Number.parseInt(v, 10), 1920)
-  .option("--image-height <px>", "Slide image height", (v) => Number.parseInt(v, 10), 1080)
+  .option("--image-width <px>", "Slide image width", (v) => Number.parseInt(v, 10), 1024)
+  .option("--image-height <px>", "Slide image height", (v) => Number.parseInt(v, 10), 768)
   .option("--no-edit", "Disable post-processing image edits")
   .option("--no-title", "Strip title text from rendered slides")
   .option("-t, --theme <slug>", "Theme slug, or 'auto' for automatic selection", "auto")

@@ -24,6 +24,8 @@ export interface StoryArtifact {
 export interface SlideDesignArtifact {
   slideIndex: number;
   title: string;
+  bodyTop?: string;
+  bodyBottom?: string;
   template: string;
   syntax: string;
 }

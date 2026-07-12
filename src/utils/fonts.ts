@@ -21,7 +21,12 @@ export async function embedFonts(cssUrl: string): Promise<string> {
         const fontRes = await fetch(absoluteUrl);
         if (!fontRes.ok) continue;
         const bytes = new Uint8Array(await fontRes.arrayBuffer());
-        const base64 = btoa(String.fromCharCode(...bytes));
+        let binary = "";
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        const base64 = btoa(binary);
         const mimeType = absoluteUrl.endsWith(".woff2")
           ? "font/woff2"
           : absoluteUrl.endsWith(".woff")

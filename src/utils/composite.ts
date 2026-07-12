@@ -25,8 +25,18 @@ export async function compositeIllustration(
 
   const slideBuf = readFileSync(slidePng);
   const illusBuf = readFileSync(illustrationPng);
-  const slideB64 = btoa(String.fromCharCode(...new Uint8Array(slideBuf)));
-  const illusB64 = btoa(String.fromCharCode(...new Uint8Array(illusBuf)));
+
+  function toBase64(buf: Uint8Array): string {
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < buf.length; i += chunkSize) {
+      binary += String.fromCharCode(...buf.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  const slideB64 = toBase64(new Uint8Array(slideBuf));
+  const illusB64 = toBase64(new Uint8Array(illusBuf));
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -91,7 +101,10 @@ export async function compositeIllustration(
       position,
     );
 
-    writeFileSync(outputPath, new Uint8Array(atob(result).split("").map((c) => c.charCodeAt(0))));
+    const raw = atob(result);
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    writeFileSync(outputPath, bytes);
     return outputPath;
   } finally {
     await browser.close();

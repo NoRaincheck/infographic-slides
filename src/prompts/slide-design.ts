@@ -45,13 +45,20 @@ IMPORTANT RULES:
   }
 - Use a variety of template types across slides — do NOT reuse the same template for every slide. Pick the template that best fits each slide's content structure.
 
+BODY TEXT RULES:
+- bodyTop and bodyBottom are optional fields for slide body text (1-2 sentences each)
+- Provide at most one of bodyTop or bodyBottom per slide — never both
+- Prefer bodyTop or bodyBottom over putting long text in the AntV syntax \`desc\` field
+- If you do include a \`desc\` field in the AntV syntax (at the \`  desc <text>\` level), keep it to 60 characters or fewer
+
 Output format:
 [
   {
     "slideIndex": 0,
     "title": "Slide Title",
+    "bodyTop": "1-2 sentence description displayed at the top of the slide body",
     "template": "list-row-horizontal-icon-arrow",
-    "syntax": "infographic list-row-horizontal-icon-arrow\\ndata\\n  title Slide Title\\n  lists\\n    - label Item\\n      icon rocket\\ntheme\\n  palette #3b82f6 #8b5cf6 #f97316"
+    "syntax": "infographic list-row-horizontal-icon-arrow\\ndata\\n  title Slide Title\\n  desc Short desc here\\n  lists\\n    - label Item\\n      icon rocket\\ntheme\\n  palette #3b82f6 #8b5cf6 #f97316"
   }
 ]`;
 }

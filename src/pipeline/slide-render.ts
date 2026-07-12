@@ -114,6 +114,8 @@ export async function runRender(
         height: opts.imageHeight,
         theme,
         htmlText: opts.htmlText,
+        bodyTop: slide.bodyTop,
+        bodyBottom: slide.bodyBottom,
       });
 
       // Composite transparent illustration onto rendered slide
