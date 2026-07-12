@@ -20,13 +20,15 @@ Output format:
 For slides that don't need illustrations, set prompt to null.`;
 
 export function illustrationUser(slides: SlideDesignArtifact[]): string {
-  return `Here are the slides:\n${JSON.stringify(
-    slides.map((s) => ({
-      index: s.slideIndex,
-      title: s.title,
-      template: s.template,
-    })),
-    null,
-    2
-  )}\n\nDecide which slides need illustrations.`;
+  return `Here are the slides:\n${
+    JSON.stringify(
+      slides.map((s) => ({
+        index: s.slideIndex,
+        title: s.title,
+        template: s.template,
+      })),
+      null,
+      2,
+    )
+  }\n\nDecide which slides need illustrations.`;
 }

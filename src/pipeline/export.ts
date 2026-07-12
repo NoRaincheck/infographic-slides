@@ -1,17 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import chalk from "chalk";
-import type {
-  RenderedSlide,
-  SlideDesignArtifact,
-  PipelineOptions,
-} from "../utils/types.js";
+import type { PipelineOptions, RenderedSlide, SlideDesignArtifact } from "../utils/types.js";
 import { artifactPaths } from "../utils/types.js";
 import { editImage } from "../utils/image-gen.js";
 
 export async function runExport(
   opts: PipelineOptions,
   slides: SlideDesignArtifact[],
-  rendered: RenderedSlide[]
+  rendered: RenderedSlide[],
 ): Promise<void> {
   if (opts.noEdit) {
     console.log(chalk.gray("  Post-processing disabled (--no-edit)"));
@@ -19,10 +16,12 @@ export async function runExport(
   }
 
   const paths = artifactPaths(opts.outputDir);
+  const slidesDir = join(opts.outputDir, "slides");
   if (
     !opts.regenerate.includes("export") &&
     !opts.skip.includes("export") &&
-    existsSync(paths.rendered)
+    existsSync(paths.rendered) &&
+    existsSync(slidesDir)
   ) {
     console.log(chalk.gray("  Using cached render artifacts"));
     return;
@@ -33,7 +32,7 @@ export async function runExport(
 
   for (const slide of successSlides) {
     const slideDesign = slides.find(
-      (s) => s.slideIndex === slide.slideIndex
+      (s) => s.slideIndex === slide.slideIndex,
     );
     if (!slideDesign) continue;
 
@@ -41,8 +40,8 @@ export async function runExport(
     // For now, skip unless explicitly enabled
     console.log(
       chalk.gray(
-        `  Slide ${slide.slideIndex + 1}: ${slide.path} (no edit applied)`
-      )
+        `  Slide ${slide.slideIndex + 1}: ${slide.path} (no edit applied)`,
+      ),
     );
   }
 }

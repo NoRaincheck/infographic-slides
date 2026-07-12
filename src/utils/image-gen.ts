@@ -4,10 +4,11 @@ import { resolve } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
-const SD_CLI = "/Users/crn/dev/stable-diffusion.cpp/build/bin/sd-cli";
-const DIFFUSION_MODEL = "flux-2-klein-9b-Q4_0.gguf";
-const VAE = "flux2_dev_diffusion_pytorch_model.safetensors";
-const LLM = "Qwen3-8B-Q3_K_M.gguf";
+const SD_BASE = "/Users/crn/dev/stable-diffusion.cpp/build";
+const SD_CLI = `${SD_BASE}/bin/sd-cli`;
+const DIFFUSION_MODEL = `${SD_BASE}/flux-2-klein-9b-Q4_0.gguf`;
+const VAE = `${SD_BASE}/flux2_dev_diffusion_pytorch_model.safetensors`;
+const LLM = `${SD_BASE}/Qwen3-8B-Q3_K_M.gguf`;
 
 export interface ImageGenOptions {
   prompt: string;
@@ -27,18 +28,27 @@ export async function generateImage(opts: ImageGenOptions): Promise<string> {
   } = opts;
 
   const args = [
-    "--diffusion-model", DIFFUSION_MODEL,
-    "--vae", VAE,
-    "--llm", LLM,
-    "-p", prompt,
-    "--output", outputPath,
-    "--cfg-scale", "1.0",
+    "--diffusion-model",
+    DIFFUSION_MODEL,
+    "--vae",
+    VAE,
+    "--llm",
+    LLM,
+    "-p",
+    prompt,
+    "--output",
+    outputPath,
+    "--cfg-scale",
+    "1.0",
     "-v",
     "--offload-to-cpu",
     "--diffusion-fa",
-    "-H", String(height),
-    "-W", String(width),
-    "--steps", String(steps),
+    "-H",
+    String(height),
+    "-W",
+    String(width),
+    "--steps",
+    String(steps),
   ];
 
   await execFileAsync(SD_CLI, args, { timeout: 300_000 });
@@ -56,18 +66,27 @@ export async function editImage(opts: ImageEditOptions): Promise<string> {
   const { inputPath, prompt, outputPath, steps = 4 } = opts;
 
   const args = [
-    "--diffusion-model", DIFFUSION_MODEL,
-    "--vae", VAE,
-    "--llm", LLM,
-    "-r", inputPath,
-    "-p", prompt,
-    "--cfg-scale", "1.0",
-    "--sampling-method", "euler",
+    "--diffusion-model",
+    DIFFUSION_MODEL,
+    "--vae",
+    VAE,
+    "--llm",
+    LLM,
+    "-r",
+    inputPath,
+    "-p",
+    prompt,
+    "--cfg-scale",
+    "1.0",
+    "--sampling-method",
+    "euler",
     "-v",
     "--diffusion-fa",
     "--offload-to-cpu",
-    "--steps", String(steps),
-    "--output", outputPath,
+    "--steps",
+    String(steps),
+    "--output",
+    outputPath,
   ];
 
   await execFileAsync(SD_CLI, args, { timeout: 300_000 });

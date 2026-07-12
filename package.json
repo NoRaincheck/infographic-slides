@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@antv/infographic": "^0.2.19",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "ora": "^8.1.0",

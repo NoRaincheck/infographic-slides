@@ -1,22 +1,15 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import chalk from "chalk";
-import type {
-  SlideDesignArtifact,
-  IllustrationDecision,
-  PipelineOptions,
-} from "../utils/types.js";
+import type { IllustrationDecision, PipelineOptions, SlideDesignArtifact } from "../utils/types.js";
 import { artifactPaths } from "../utils/types.js";
 import { chatJson, type LLMOptions } from "../llm.js";
-import {
-  ILLUSTRATION_SYSTEM,
-  illustrationUser,
-} from "../prompts/illustration.js";
+import { ILLUSTRATION_SYSTEM, illustrationUser } from "../prompts/illustration.js";
 
 export async function runIllustrations(
   opts: PipelineOptions,
   llmOpts: LLMOptions,
-  slides: SlideDesignArtifact[]
+  slides: SlideDesignArtifact[],
 ): Promise<IllustrationDecision[]> {
   const paths = artifactPaths(opts.outputDir);
 
@@ -41,7 +34,7 @@ export async function runIllustrations(
     mkdirSync(dirname(paths.illustrations), { recursive: true });
     writeFileSync(
       paths.illustrations,
-      JSON.stringify(decisions, null, 2)
+      JSON.stringify(decisions, null, 2),
     );
     return decisions;
   }
@@ -50,7 +43,19 @@ export async function runIllustrations(
   const decisions = await chatJson<IllustrationDecision[]>(
     llmOpts,
     ILLUSTRATION_SYSTEM,
-    illustrationUser(slides)
+    illustrationUser(slides),
+    {
+      validate: (val) => {
+        if (!Array.isArray(val)) throw new Error("expected array of illustration decisions");
+        for (const d of val) {
+          const dec = d as Record<string, unknown>;
+          if (typeof dec.slideIndex !== "number") throw new Error("decision missing slideIndex");
+          if (dec.prompt !== null && typeof dec.prompt !== "string") {
+            throw new Error("decision prompt must be string or null");
+          }
+        }
+      },
+    },
   );
 
   mkdirSync(dirname(paths.illustrations), { recursive: true });

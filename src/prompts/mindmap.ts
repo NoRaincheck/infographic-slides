@@ -11,21 +11,21 @@ Rules:
 
 Output format:
 {
-  "label": "Main Topic",
-  "children": [
-    { "label": "Sub-topic 1", "children": [...] },
-    { "label": "Sub-topic 2" }
-  ]
+  "tree": {
+    "label": "Main Topic",
+    "children": [
+      { "label": "Sub-topic 1", "children": [...] },
+      { "label": "Sub-topic 2" }
+    ]
+  }
 }`;
 
 export function mindmapUser(
   input: string,
   slideCount?: number,
-  inputSource?: "text" | "file"
+  inputSource?: "text" | "file",
 ): string {
-  const hint = slideCount
-    ? `\nTarget approximately ${slideCount} slides worth of content.`
-    : "";
+  const hint = slideCount ? `\nTarget approximately ${slideCount} slides worth of content.` : "";
   if (inputSource === "file") {
     return `Here is the user's content. Create a mindmap that respects the existing structure and instructions where present.
 

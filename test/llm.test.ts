@@ -1,7 +1,7 @@
-import { describe, it, mock, beforeEach, afterEach } from "node:test";
+import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chat, chatJson, SKILLS } from "../src/llm.js";
 
@@ -25,7 +25,7 @@ describe("chat", () => {
     const result = await chat(
       { url: "http://localhost:1234", model: "test" },
       "system prompt",
-      "user message"
+      "user message",
     );
 
     assert.equal(result, "hello world");
@@ -54,9 +54,9 @@ describe("chat", () => {
         chat(
           { url: "http://localhost:1234", model: "test" },
           "sys",
-          "user"
+          "user",
         ),
-      { message: /LLM request failed \(500\)/ }
+      { message: /LLM request failed \(500\)/ },
     );
   });
 });
@@ -79,7 +79,7 @@ describe("chatJson", () => {
     const result = await chatJson<{ key: string }>(
       { url: "http://localhost:1234", model: "test" },
       "sys",
-      "user"
+      "user",
     );
 
     assert.deepEqual(result, { key: "value" });
@@ -97,7 +97,7 @@ describe("chatJson", () => {
     const result = await chatJson<{ key: string }>(
       { url: "http://localhost:1234", model: "test" },
       "sys",
-      "user"
+      "user",
     );
 
     assert.deepEqual(result, { key: "fenced" });
@@ -115,14 +115,14 @@ describe("chatJson", () => {
     const result = await chatJson<{ id: number }[]>(
       { url: "http://localhost:1234", model: "test" },
       "sys",
-      "user"
+      "user",
     );
 
     assert.equal(result.length, 2);
     assert.equal(result[0].id, 1);
   });
 
-  it("throws on invalid JSON", async () => {
+  it("throws on invalid JSON after exhausting retries", async () => {
     globalThis.fetch = mock.fn(async () => ({
       ok: true,
       json: async () => ({
@@ -135,10 +135,181 @@ describe("chatJson", () => {
         chatJson<{ key: string }>(
           { url: "http://localhost:1234", model: "test" },
           "sys",
-          "user"
+          "user",
         ),
-      SyntaxError
+      SyntaxError,
     );
+
+    assert.equal(globalThis.fetch.mock.callCount(), 3);
+  });
+
+  it("retries on parse failure and succeeds", async () => {
+    let callCount = 0;
+    globalThis.fetch = mock.fn(async () => {
+      callCount++;
+      const content = callCount < 3 ? "not json" : '{"key": "recovered"}';
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content } }],
+        }),
+      };
+    }) as typeof fetch;
+
+    const result = await chatJson<{ key: string }>(
+      { url: "http://localhost:1234", model: "test" },
+      "sys",
+      "user",
+    );
+
+    assert.deepEqual(result, { key: "recovered" });
+    assert.equal(globalThis.fetch.mock.callCount(), 3);
+  });
+
+  it("respects custom retry count", async () => {
+    globalThis.fetch = mock.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: "not json" } }],
+      }),
+    })) as typeof fetch;
+
+    await assert.rejects(
+      () =>
+        chatJson<{ key: string }>(
+          { url: "http://localhost:1234", model: "test" },
+          "sys",
+          "user",
+          { retries: 0 },
+        ),
+      SyntaxError,
+    );
+
+    assert.equal(globalThis.fetch.mock.callCount(), 1);
+  });
+
+  it("retries on validation failure", async () => {
+    let callCount = 0;
+    globalThis.fetch = mock.fn(async () => {
+      callCount++;
+      const content = callCount < 2 ? '{"wrong": "structure"}' : '{"tree": {"label": "ok", "children": []}}';
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content } }],
+        }),
+      };
+    }) as typeof fetch;
+
+    const result = await chatJson<{ tree: { label: string } }>(
+      { url: "http://localhost:1234", model: "test" },
+      "sys",
+      "user",
+      {
+        validate: (val) => {
+          const obj = val as Record<string, unknown>;
+          if (!obj.tree || typeof obj.tree !== "object") {
+            throw new Error("missing tree");
+          }
+        },
+      },
+    );
+
+    assert.deepEqual(result, { tree: { label: "ok", children: [] } });
+    assert.equal(globalThis.fetch.mock.callCount(), 2);
+  });
+
+  it("extracts JSON wrapped in prose", async () => {
+    globalThis.fetch = mock.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: 'Here is the result:\n{"key": "extracted"}\nLet me know if you need anything else.',
+            },
+          },
+        ],
+      }),
+    })) as typeof fetch;
+
+    const result = await chatJson<{ key: string }>(
+      { url: "http://localhost:1234", model: "test" },
+      "sys",
+      "user",
+    );
+
+    assert.deepEqual(result, { key: "extracted" });
+  });
+
+  it("extracts JSON array wrapped in prose", async () => {
+    globalThis.fetch = mock.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: 'Sure! Here you go:\n[{"id": 1}, {"id": 2}]\nHope that helps!',
+            },
+          },
+        ],
+      }),
+    })) as typeof fetch;
+
+    const result = await chatJson<{ id: number }[]>(
+      { url: "http://localhost:1234", model: "test" },
+      "sys",
+      "user",
+    );
+
+    assert.equal(result.length, 2);
+    assert.equal(result[0].id, 1);
+  });
+
+  it("strips trailing commas", async () => {
+    globalThis.fetch = mock.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: '{"a": 1, "b": 2,}',
+            },
+          },
+        ],
+      }),
+    })) as typeof fetch;
+
+    const result = await chatJson<{ a: number; b: number }>(
+      { url: "http://localhost:1234", model: "test" },
+      "sys",
+      "user",
+    );
+
+    assert.deepEqual(result, { a: 1, b: 2 });
+  });
+
+  it("extracts from code fence with surrounding text", async () => {
+    globalThis.fetch = mock.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: 'Sure! Here is the JSON:\n```json\n{"wrapped": true}\n```\nLet me know.',
+            },
+          },
+        ],
+      }),
+    })) as typeof fetch;
+
+    const result = await chatJson<{ wrapped: boolean }>(
+      { url: "http://localhost:1234", model: "test" },
+      "sys",
+      "user",
+    );
+
+    assert.deepEqual(result, { wrapped: true });
   });
 });
 

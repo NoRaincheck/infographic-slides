@@ -1,13 +1,13 @@
-import { describe, it, beforeEach, afterEach, mock } from "node:test";
+import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { runMindmap } from "../src/pipeline/mindmap.js";
 import { runStory } from "../src/pipeline/story.js";
 import { runSlideDesign } from "../src/pipeline/slide-design.js";
 import { runIllustrations } from "../src/pipeline/illustration.js";
-import { artifactPaths, type PipelineOptions, type LLMOptions } from "../src/utils/types.js";
+import { artifactPaths, type LLMOptions, type PipelineOptions } from "../src/utils/types.js";
 
 function tmpDir(): string {
   return join(tmpdir(), `test-${Date.now()}-${Math.random().toString(36).slice(2)}`);

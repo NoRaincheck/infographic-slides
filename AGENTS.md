@@ -4,11 +4,11 @@ Instructions for AI agents working on this codebase.
 
 ## Project overview
 
-TypeScript CLI tool that generates infographic slide decks. 6-stage pipeline:
-mindmap → story → slide design → illustrations → render → export.
+TypeScript CLI tool that generates infographic slide decks. 6-stage pipeline: mindmap → story → slide design →
+illustrations → render → export.
 
-All content generation goes through a local LLM (OpenAI-compatible chat completions).
-Rendering uses @antv/infographic SSR + Puppeteer. Image generation uses Flux 2 via CLI.
+All content generation goes through a local LLM (OpenAI-compatible chat completions). Rendering uses @antv/infographic
+SSR + Puppeteer. Image generation uses Flux 2 via CLI.
 
 ## Build & run
 
@@ -23,17 +23,17 @@ Verify changes with `npx tsc --noEmit` and `npm test`.
 
 ## Key files
 
-| File | Purpose |
-|---|---|
-| `src/index.ts` | CLI entry point, orchestrates pipeline |
-| `src/llm.ts` | LLM client (`chat`, `chatJson`) + skill file loader |
-| `src/prompts/*.ts` | System/user prompts for each LLM call |
-| `src/pipeline/*.ts` | One file per pipeline stage |
-| `src/utils/types.ts` | Shared interfaces + artifact path helpers |
-| `src/utils/render.ts` | AntV SSR → SVG → Puppeteer → PNG |
-| `src/utils/image-gen.ts` | Flux 2 CLI wrapper (generate + edit) |
-| `skills/` | Vendored AntV Infographic skills (prompt context for LLM) |
-| `test/*.test.ts` | Unit tests (node:test + tsx) |
+| File                     | Purpose                                                   |
+| ------------------------ | --------------------------------------------------------- |
+| `src/index.ts`           | CLI entry point, orchestrates pipeline                    |
+| `src/llm.ts`             | LLM client (`chat`, `chatJson`) + skill file loader       |
+| `src/prompts/*.ts`       | System/user prompts for each LLM call                     |
+| `src/pipeline/*.ts`      | One file per pipeline stage                               |
+| `src/utils/types.ts`     | Shared interfaces + artifact path helpers                 |
+| `src/utils/render.ts`    | AntV SSR → SVG → Puppeteer → PNG                          |
+| `src/utils/image-gen.ts` | Flux 2 CLI wrapper (generate + edit)                      |
+| `skills/`                | Vendored AntV Infographic skills (prompt context for LLM) |
+| `test/*.test.ts`         | Unit tests (node:test + tsx)                              |
 
 ## Conventions
 
@@ -43,7 +43,7 @@ Verify changes with `npx tsc --noEmit` and `npm test`.
   - Cache check: `!opts.regenerate.includes(stage) && !opts.skip.includes(stage) && existsSync(path)`
   - Skip fallback: produce minimal sensible output without LLM
 - **Prompts**: system prompts are constants in `src/prompts/*.ts`, user prompts are functions
-- **LLM output**: always JSON. Parse with `chatJson<T>()` which handles ```json fences
+- **LLM output**: always JSON. Parse with `chatJson<T>()` which handles extraction and retries
 
 ## LLM integration
 
@@ -51,6 +51,31 @@ Verify changes with `npx tsc --noEmit` and `npm test`.
 - Model: configurable, default `qwen3.6-35b-a3b-mtp`
 - Skills are loaded from `skills/` directory and injected into system prompts
 - All LLM calls go through `src/llm.ts` — never call fetch directly
+
+### LLM resilience patterns
+
+Local LLMs are unreliable. The codebase handles this at two levels:
+
+**`chatJson` level** (`src/llm.ts`):
+
+- Flexible JSON extraction: code fences → direct parse → brace balancing → trailing comma stripping
+- Retries on parse or validation failure (default 2 retries, 3 total attempts)
+- Accepts optional `validate` callback — throw to trigger retry
+- Logs retry attempts to stderr
+
+**Pipeline stage level** (`src/pipeline/*.ts`):
+
+- Each stage passes a `validate` function to `chatJson` that checks the parsed structure
+- Cached artifacts are normalized on read (e.g. `normalizeMindmap` handles old vs new schema)
+- Mindmap stage falls back to a minimal tree if all LLM attempts fail
+- Other stages throw on failure (caught by the pipeline orchestrator)
+
+When adding a new pipeline stage:
+
+1. Define the expected artifact shape in `src/utils/types.ts`
+2. Write a `validate` function that checks for required fields and types
+3. Pass it to `chatJson` as the `validate` option
+4. Handle the case where the LLM returns a slightly different structure (e.g. missing optional wrappers)
 
 ## Rendering
 
@@ -77,6 +102,6 @@ Verify changes with `npx tsc --noEmit` and `npm test`.
 ## Common pitfalls
 
 - AntV Infographic syntax is whitespace-sensitive: 2-space indentation, space-separated key-value pairs
-- The ` Illus` component accepts base64 data URIs for embedded images
+- The `Illus` component accepts base64 data URIs for embedded images
 - Flux 2 CLI paths are hardcoded in `src/utils/image-gen.ts` — update for your system
 - Puppeteer `headless: true` (not `"new"`) for TypeScript compatibility

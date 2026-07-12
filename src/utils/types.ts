@@ -56,6 +56,7 @@ export interface PipelineOptions {
   imageWidth: number;
   imageHeight: number;
   noEdit: boolean;
+  noTitle: boolean;
 }
 
 export interface ArtifactPaths {

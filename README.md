@@ -1,23 +1,20 @@
 # Infographic Slides
 
-A CLI tool that generates infographic slide decks from text using purely local LLMs and image generation. A modern re-implementation of [lida](https://github.com/microsoft/lida) using [AntV Infographic](https://infographic.antv.vision/) for rendering.
+A CLI tool that generates infographic slide decks from text using purely local LLMs and image generation. A modern
+re-implementation of [lida](https://github.com/microsoft/lida) using
+[AntV Infographic](https://infographic.antv.vision/) for rendering.
 
 ## How it works
 
-1. **Mindmap**: Break content into a hierarchical concept tree
-2. **Story**: Plan a coherent narrative with a target number of slides
-3. **Slide Design**: Choose the best AntV Infographic template for each slide and generate valid DSL syntax
-4. **Illustrations**: Decide which slides need custom illustrations, generate them with Flux 2
-5. **Render**: Embed illustrations into the syntax, render via AntV SSR + Puppeteer to PNG
-6. **Export**: Post-process slides with Flux 2 edit (optional)
-
-Each stage writes a reviewable JSON artifact to `output/artifacts/`. Stages are cached — re-running uses existing artifacts unless `--regenerate` is specified.
+Mindmap → Story → Slide Design → Illustrations → Render → Export. Each stage calls a local LLM, writes a JSON artifact
+to `output/artifacts/`, and caches it for the next run.
 
 ## Prerequisites
 
 - Node.js 18+
 - A local LLM serving OpenAI-compatible chat completions (default: `localhost:1234`)
-- [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) with Flux 2 models (for illustration generation)
+- [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) with Flux 2 models (for illustration
+  generation)
 
 ### LLM setup
 
@@ -87,21 +84,21 @@ node dist/index.js "quantum computing" \
 
 ### CLI options
 
-| Flag | Description | Default |
-|---|---|---|
-| `<input>` | Topic or text content | (required) |
-| `-s, --slides <n>` | Target slide count | auto |
-| `-o, --output <dir>` | Output directory | `./output` |
-| `--llm-url <url>` | LLM API base URL | `http://localhost:1234` |
-| `-m, --model <name>` | LLM model name | `qwen3.6-35b-a3b-mtp` |
-| `--illustrations <mode>` | `on`, `off`, or `auto` | `auto` |
-| `-y, --accept-all` | Auto-accept all LLM outputs | false |
-| `--skip <stages>` | Skip stages (comma-separated) | `[]` |
-| `--regenerate <stages>` | Force re-run stages | `[]` |
-| `--from <stage>` | Resume from a specific stage | — |
-| `--image-width <px>` | Slide width | `1920` |
-| `--image-height <px>` | Slide height | `1080` |
-| `--no-edit` | Disable post-processing | — |
+| Flag                     | Description                   | Default                 |
+| ------------------------ | ----------------------------- | ----------------------- |
+| `<input>`                | Topic or text content         | (required)              |
+| `-s, --slides <n>`       | Target slide count            | auto                    |
+| `-o, --output <dir>`     | Output directory              | `./output`              |
+| `--llm-url <url>`        | LLM API base URL              | `http://localhost:1234` |
+| `-m, --model <name>`     | LLM model name                | `qwen3.6-35b-a3b-mtp`   |
+| `--illustrations <mode>` | `on`, `off`, or `auto`        | `auto`                  |
+| `-y, --accept-all`       | Auto-accept all LLM outputs   | false                   |
+| `--skip <stages>`        | Skip stages (comma-separated) | `[]`                    |
+| `--regenerate <stages>`  | Force re-run stages           | `[]`                    |
+| `--from <stage>`         | Resume from a specific stage  | —                       |
+| `--image-width <px>`     | Slide width                   | `1920`                  |
+| `--image-height <px>`    | Slide height                  | `1080`                  |
+| `--no-edit`              | Disable post-processing       | —                       |
 
 ### Stage control
 
@@ -116,41 +113,11 @@ node dist/index.js "topic" --regenerate slides
 node dist/index.js "topic" --from illustrations
 ```
 
-## Output structure
+## Docs
 
-```
-output/
-├── artifacts/
-│   ├── 01-mindmap.json          # Concept hierarchy
-│   ├── 02-story.json            # Story arc + slide plan
-│   ├── 03-slides.json           # Template choices + DSL syntax
-│   ├── 04-illustrations.json    # Illustration decisions
-│   └── 05-rendered.json         # Render status
-├── slides/
-│   ├── slide-01.png
-│   ├── slide-01.svg
-│   └── ...
-└── illustrations/
-    ├── slide-03-illus.png
-    └── ...
-```
-
-## Skills
-
-Vendored from [AntV Infographic](https://github.com/antvis/Infographic/tree/main/skills):
-
-- `skills/infographic-creator/SKILL.md` — full render guidance (HTML output)
-- `skills/infographic-syntax-creator/` — DSL syntax generation rules + template reference
-
-These are injected into LLM system prompts during the slide design stage.
-
-## Architecture
-
-See [DESIGN.md](./DESIGN.md) for the full architecture and data flow.
-
-## Future work
-
-See [FUTURE.md](./FUTURE.md) for planned features: partial regeneration, interactive mode, PowerPoint export.
+- [DESIGN.md](./DESIGN.md) — architecture, data flow, LLM resilience, artifact formats
+- [FUTURE.md](./FUTURE.md) — planned features: partial regeneration, interactive mode, PowerPoint export
+- [AGENTS.md](./AGENTS.md) — instructions for AI agents working on this codebase
 
 ## License
 

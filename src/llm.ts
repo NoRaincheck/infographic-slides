@@ -1,6 +1,7 @@
-import { readFileSync, existsSync } from "node:fs";
-import { resolve, dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import chalk from "chalk";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -37,14 +38,14 @@ function loadSkill(name: string): string {
 
 function loadSkillReference(
   skillName: string,
-  refPath: string
+  refPath: string,
 ): string {
   const fullPath = resolve(
     PROJECT_ROOT,
     "skills",
     skillName,
     "references",
-    refPath
+    refPath,
   );
   try {
     return readFileSync(fullPath, "utf-8");
@@ -56,14 +57,13 @@ function loadSkillReference(
 export const SKILLS = {
   infographicCreator: () => loadSkill("infographic-creator"),
   infographicSyntaxCreator: () => loadSkill("infographic-syntax-creator"),
-  infographicSyntaxPrompt: () =>
-    loadSkillReference("infographic-syntax-creator", "prompt.md"),
+  infographicSyntaxPrompt: () => loadSkillReference("infographic-syntax-creator", "prompt.md"),
 };
 
 export async function chat(
   opts: LLMOptions,
   systemPrompt: string,
-  userMessage: string
+  userMessage: string,
 ): Promise<string> {
   const response = await fetch(`${opts.url}/v1/chat/completions`, {
     method: "POST",
@@ -90,13 +90,110 @@ export async function chat(
   return data.choices[0].message.content;
 }
 
+export interface ChatJsonOptions {
+  retries?: number;
+  validate?: (value: unknown) => void;
+}
+
+function extractJson(raw: string): string {
+  const fenced = raw.match(/```json\s*([\s\S]*?)```/);
+  if (fenced) return fenced[1].trim();
+
+  const trimmed = raw.trim();
+  try {
+    JSON.parse(trimmed);
+    return trimmed;
+  } catch {
+    // continue to heuristic extraction
+  }
+
+  const candidates: string[] = [];
+
+  const startBrace = trimmed.indexOf("{");
+  const startBracket = trimmed.indexOf("[");
+  let start = -1;
+  if (startBrace === -1) start = startBracket;
+  else if (startBracket === -1) start = startBrace;
+  else start = Math.min(startBrace, startBracket);
+
+  if (start !== -1) {
+    const open = trimmed[start];
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let i = start; i < trimmed.length; i++) {
+      const ch = trimmed[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (ch === "{" || ch === "[") depth++;
+      if (ch === "}" || ch === "]") depth--;
+      if (depth === 0 && i > start) {
+        candidates.push(trimmed.slice(start, i + 1));
+        break;
+      }
+    }
+  }
+
+  const stripped = raw.replace(/,\s*([\]}])/g, "$1");
+  if (stripped !== raw) {
+    const strippedFenced = stripped.match(/```json\s*([\s\S]*?)```/);
+    if (strippedFenced) candidates.push(strippedFenced[1].trim());
+    const strippedTrimmed = stripped.trim();
+    if (strippedTrimmed !== trimmed) candidates.push(strippedTrimmed);
+  }
+
+  for (const candidate of candidates) {
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return trimmed;
+}
+
 export async function chatJson<T>(
   opts: LLMOptions,
   systemPrompt: string,
-  userMessage: string
+  userMessage: string,
+  jsonOpts?: ChatJsonOptions,
 ): Promise<T> {
-  const raw = await chat(opts, systemPrompt, userMessage);
-  const jsonMatch = raw.match(/```json\s*([\s\S]*?)```/);
-  const jsonStr = jsonMatch ? jsonMatch[1] : raw;
-  return JSON.parse(jsonStr.trim()) as T;
+  const maxAttempts = 1 + (jsonOpts?.retries ?? 2);
+  const validate = jsonOpts?.validate;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const raw = await chat(opts, systemPrompt, userMessage);
+    const jsonStr = extractJson(raw);
+    try {
+      const parsed = JSON.parse(jsonStr) as T;
+      if (validate) {
+        validate(parsed);
+      }
+      return parsed;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts) {
+        console.log(
+          chalk.yellow(
+            `  Attempt ${attempt}/${maxAttempts} failed, retrying... (${(err as Error).message})`,
+          ),
+        );
+      }
+    }
+  }
+  throw lastError;
 }

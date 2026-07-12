@@ -1,18 +1,7 @@
-import {
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-  existsSync,
-  readFileSync as readBinary,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync as readBinary, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import chalk from "chalk";
-import type {
-  SlideDesignArtifact,
-  IllustrationDecision,
-  RenderedSlide,
-  PipelineOptions,
-} from "../utils/types.js";
+import type { IllustrationDecision, PipelineOptions, RenderedSlide, SlideDesignArtifact } from "../utils/types.js";
 import { artifactPaths } from "../utils/types.js";
 import { generateImage } from "../utils/image-gen.js";
 import { renderSyntaxToPng } from "../utils/render.js";
@@ -20,19 +9,21 @@ import { renderSyntaxToPng } from "../utils/render.js";
 export async function runRender(
   opts: PipelineOptions,
   slides: SlideDesignArtifact[],
-  illustrations: IllustrationDecision[]
+  illustrations: IllustrationDecision[],
 ): Promise<RenderedSlide[]> {
   const paths = artifactPaths(opts.outputDir);
   const slidesDir = join(opts.outputDir, "slides");
   const illusDir = join(opts.outputDir, "illustrations");
 
-  if (
-    !opts.regenerate.includes("render") &&
-    !opts.skip.includes("render") &&
-    existsSync(paths.rendered)
-  ) {
-    console.log(chalk.gray("  Using cached render artifact"));
-    return JSON.parse(readFileSync(paths.rendered, "utf-8"));
+  const forceRegenerate = opts.regenerate.includes("render");
+
+  if (opts.skip.includes("render")) {
+    console.log(chalk.yellow("  Skipped — using placeholder slides"));
+    return slides.map((s) => ({
+      slideIndex: s.slideIndex,
+      status: "ok" as const,
+      path: join(slidesDir, `slide-${String(s.slideIndex + 1).padStart(2, "0")}.png`),
+    }));
   }
 
   mkdirSync(slidesDir, { recursive: true });
@@ -45,56 +36,57 @@ export async function runRender(
     const slideNum = String(idx + 1).padStart(2, "0");
     const pngPath = join(slidesDir, `slide-${slideNum}.png`);
 
+    if (!forceRegenerate && existsSync(pngPath)) {
+      console.log(chalk.gray(`  Slide ${slideNum}: using cached`));
+      results.push({ slideIndex: idx, status: "ok", path: pngPath });
+      continue;
+    }
+
     console.log(chalk.cyan(`  Rendering slide ${slideNum}: ${slide.title}`));
 
     let syntax = slide.syntax;
+
+    if (opts.noTitle) {
+      syntax = syntax.replace(/^ +title [^\n]*\n?/m, "");
+    }
     const illusDecision = illustrations.find((d) => d.slideIndex === idx);
 
-    // Generate illustration if needed
     if (illusDecision?.prompt && opts.illustrations !== "off") {
-      console.log(chalk.gray(`    Generating illustration...`));
       const illusPath = join(illusDir, `slide-${slideNum}-illus.png`);
-      try {
-        await generateImage({
-          prompt: illusDecision.prompt,
-          outputPath: illusPath,
-          width: 512,
-          height: 512,
-        });
-
-        // Embed illustration as base64 in syntax
-        const illusBuffer = readBinary(illusPath);
-        const base64 = illusBuffer.toString("base64");
-        const dataUri = `data:image/png;base64,${base64}`;
-
-        // Add illus to data block
-        syntax = syntax.replace(
-          /(\ntheme)/,
-          `\n  illus ${dataUri}$1`
-        );
-
-        results.push({
-          slideIndex: idx,
-          status: "ok",
-          path: pngPath,
-          illustration: illusPath,
-        });
-      } catch (err) {
-        console.log(
-          chalk.yellow(`    Illustration failed: ${(err as Error).message}`)
-        );
-        results.push({
-          slideIndex: idx,
-          status: "ok",
-          path: pngPath,
-        });
+      if (!existsSync(illusPath)) {
+        console.log(chalk.gray(`    Generating illustration...`));
+        try {
+          await generateImage({
+            prompt: illusDecision.prompt,
+            outputPath: illusPath,
+            width: 512,
+            height: 512,
+          });
+        } catch (err) {
+          console.log(
+            chalk.yellow(`    Illustration failed: ${(err as Error).message}`),
+          );
+          results.push({
+            slideIndex: idx,
+            status: "ok",
+            path: pngPath,
+          });
+          continue;
+        }
+      } else {
+        console.log(chalk.gray(`    Using cached illustration`));
       }
-    } else {
-      results.push({
-        slideIndex: idx,
-        status: "ok",
-        path: pngPath,
-      });
+
+      // Embed illustration as base64 in syntax
+      const illusBuffer = readBinary(illusPath);
+      const base64 = illusBuffer.toString("base64");
+      const dataUri = `data:image/png;base64,${base64}`;
+
+      // Add illus to data block
+      syntax = syntax.replace(
+        /(\ntheme)/,
+        `\n  illus ${dataUri}$1`,
+      );
     }
 
     // Render with AntV SSR
@@ -106,26 +98,24 @@ export async function runRender(
         height: opts.imageHeight,
       });
 
-      const existing = results.find((r) => r.slideIndex === idx);
-      if (existing) {
-        existing.path = renderedPng;
-        existing.svgPath = svgPath;
-      }
+      results.push({
+        slideIndex: idx,
+        status: "ok",
+        path: renderedPng,
+        svgPath,
+        ...(illusDecision?.prompt && opts.illustrations !== "off"
+          ? { illustration: join(illusDir, `slide-${slideNum}-illus.png`) }
+          : {}),
+      });
     } catch (err) {
-      const existing = results.find((r) => r.slideIndex === idx);
-      if (existing) {
-        existing.status = "error";
-        existing.error = (err as Error).message;
-      } else {
-        results.push({
-          slideIndex: idx,
-          status: "error",
-          path: pngPath,
-          error: (err as Error).message,
-        });
-      }
+      results.push({
+        slideIndex: idx,
+        status: "error",
+        path: pngPath,
+        error: (err as Error).message,
+      });
       console.log(
-        chalk.red(`    Render failed: ${(err as Error).message}`)
+        chalk.red(`    Render failed: ${(err as Error).message}`),
       );
     }
   }

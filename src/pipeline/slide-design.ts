@@ -1,22 +1,15 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import chalk from "chalk";
-import type {
-  StoryArtifact,
-  SlideDesignArtifact,
-  PipelineOptions,
-} from "../utils/types.js";
+import type { PipelineOptions, SlideDesignArtifact, StoryArtifact } from "../utils/types.js";
 import { artifactPaths } from "../utils/types.js";
 import { chatJson, type LLMOptions } from "../llm.js";
-import {
-  slideDesignSystem,
-  slideDesignUser,
-} from "../prompts/slide-design.js";
+import { slideDesignSystem, slideDesignUser } from "../prompts/slide-design.js";
 
 export async function runSlideDesign(
   opts: PipelineOptions,
   llmOpts: LLMOptions,
-  story: StoryArtifact
+  story: StoryArtifact,
 ): Promise<SlideDesignArtifact[]> {
   const paths = artifactPaths(opts.outputDir);
 
@@ -54,7 +47,18 @@ export async function runSlideDesign(
   const artifacts = await chatJson<SlideDesignArtifact[]>(
     llmOpts,
     slideDesignSystem(),
-    slideDesignUser(story.slides)
+    slideDesignUser(story.slides),
+    {
+      validate: (val) => {
+        if (!Array.isArray(val)) throw new Error("expected array of slide designs");
+        for (const s of val) {
+          const slide = s as Record<string, unknown>;
+          if (typeof slide.title !== "string") throw new Error("slide missing title");
+          if (typeof slide.template !== "string") throw new Error("slide missing template");
+          if (typeof slide.syntax !== "string") throw new Error("slide missing syntax");
+        }
+      },
+    },
   );
 
   mkdirSync(dirname(paths.slideDesign), { recursive: true });

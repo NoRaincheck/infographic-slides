@@ -64,8 +64,8 @@ Input: StoryArtifact
   → output/artifacts/03-slides.json
 ```
 
-For each slide, selects an AntV Infographic template and generates valid DSL.
-The vendored skill's template list and syntax rules are injected into the system prompt.
+For each slide, selects an AntV Infographic template and generates valid DSL. The vendored skill's template list and
+syntax rules are injected into the system prompt.
 
 ### Stage 4: Illustrations
 
@@ -115,6 +115,7 @@ output/artifacts/
 ```
 
 Artifacts are:
+
 - **Reviewable** — human-readable JSON, can be hand-edited
 - **Cacheable** — stages check for existing artifacts before calling LLM
 - **Regeneratable** — `--regenerate <stage>` forces re-execution
@@ -134,8 +135,8 @@ data
       icon atom
 ```
 
-The `Illus` component in the rendered SVG reads this and displays the image
-in the designated region. No custom resource loader is needed.
+The `Illus` component in the rendered SVG reads this and displays the image in the designated region. No custom resource
+loader is needed.
 
 ## LLM integration
 
@@ -154,16 +155,48 @@ POST {llmUrl}/v1/chat/completions
 
 ### Skill injection
 
-Skills from `skills/` are loaded at runtime and injected into system prompts.
-Only the slide design stage injects the full infographic-syntax-creator skill
-(DSL rules + template list). Other stages use domain-specific prompts.
+Skills from `skills/` are loaded at runtime and injected into system prompts. Only the slide design stage injects the
+full infographic-syntax-creator skill (DSL rules + template list). Other stages use domain-specific prompts.
 
 ### JSON parsing
 
-LLM responses are expected to contain JSON. `chatJson<T>()` handles:
-1. Extracting JSON from ```json fenced code blocks
-2. Falling back to raw parse if no fences found
-3. Type assertion via generic parameter
+LLM responses are expected to contain JSON. `chatJson<T>()` handles this with a multi-stage extraction pipeline:
+
+1. **Code fence extraction** — matches `` ```json ... ``` `` blocks
+2. **Direct parse** — tries `JSON.parse` on the trimmed response
+3. **Brace balancing** — finds the first `{...}` or `[...]` by tracking depth, strings, and escapes
+4. **Trailing comma stripping** — removes `,}` and `,]` patterns, then retries all of the above
+
+The first candidate that parses successfully is returned.
+
+#### Retries and validation
+
+`chatJson` accepts an optional `ChatJsonOptions`:
+
+```typescript
+interface ChatJsonOptions {
+  retries?: number; // default: 2 (3 total attempts)
+  validate?: (value: unknown) => void; // throw to trigger retry
+}
+```
+
+Each pipeline stage passes a `validate` function that checks the parsed structure matches the expected artifact shape.
+If validation fails (or JSON parsing fails), the LLM is called again with the same prompt. After all retries are
+exhausted, the last error is thrown.
+
+**Plan vs actual**: The original design called `JSON.parse` once and trusted the result. In practice, local LLMs
+frequently wrap JSON in prose, use trailing commas, or return slightly wrong structures. The extraction pipeline and
+retry loop handle these cases without requiring prompt engineering workarounds.
+
+#### Schema normalization
+
+Cached artifacts may have been written by earlier versions of the code with different schemas. Each stage normalizes
+cached data before use:
+
+- **Mindmap**: `normalizeMindmap` accepts both `{ label, children }` (old) and `{ tree: { label, children } }`
+  (current). Falls back to a minimal tree if neither matches.
+- **Other stages**: Currently trust the cached schema. If schema versioning is added (see FUTURE.md), normalization will
+  be needed here too.
 
 ## Rendering pipeline
 

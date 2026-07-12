@@ -2,8 +2,7 @@
 
 ## Partial Regeneration
 
-The ability to re-run individual stages or refine specific slides without
-regenerating the entire deck.
+The ability to re-run individual stages or refine specific slides without regenerating the entire deck.
 
 ### Proposed CLI additions
 
@@ -23,12 +22,9 @@ npx infographic-slides refine --stage story
 
 ### Implementation notes
 
-- Each artifact JSON is the source of truth; editing it + re-running the
-  affected stage should produce correct output
-- `refine` subcommand reads existing artifacts, applies changes, and only
-  re-runs downstream stages
-- A `--cascade` flag (default true) would automatically re-run stages 3-6
-  when stage 2 is modified
+- Each artifact JSON is the source of truth; editing it + re-running the affected stage should produce correct output
+- `refine` subcommand reads existing artifacts, applies changes, and only re-runs downstream stages
+- A `--cascade` flag (default true) would automatically re-run stages 3-6 when stage 2 is modified
 
 ### Artifact schema versioning
 
@@ -44,6 +40,7 @@ npx infographic-slides "quantum computing" --interactive
 ```
 
 Would show:
+
 1. Mindmap tree (accept / regenerate / edit)
 2. Story plan (accept / regenerate / reorder slides)
 3. Slide designs (accept / swap template / regenerate individual)

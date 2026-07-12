@@ -2,7 +2,7 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
-import { mkdirSync, readFileSync, existsSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import type { PipelineOptions, StageName } from "./utils/types.js";
 import { STAGE_NAMES } from "./utils/types.js";
 import type { LLMOptions } from "./llm.js";
@@ -33,7 +33,7 @@ program
   .option(
     "--illustrations <mode>",
     "Illustration generation: on, off, auto",
-    "auto"
+    "auto",
   )
   .option("-y, --accept-all", "Auto-accept all LLM outputs", false)
   .option("--skip <stages>", "Skip stages (comma-separated)", parseList, [])
@@ -41,12 +41,13 @@ program
     "--regenerate <stages>",
     "Force regenerate stages (comma-separated)",
     parseList,
-    []
+    [],
   )
   .option("--from <stage>", "Resume from a specific stage")
   .option("--image-width <px>", "Slide image width", (v) => Number.parseInt(v, 10), 1920)
   .option("--image-height <px>", "Slide image height", (v) => Number.parseInt(v, 10), 1080)
   .option("--no-edit", "Disable post-processing image edits")
+  .option("--no-title", "Strip title text from rendered slides")
   .action(async (input: string, opts: Record<string, unknown>) => {
     let inputText: string;
     let inputSource: "text" | "file";
@@ -78,6 +79,7 @@ program
       imageWidth: opts.imageWidth as number,
       imageHeight: opts.imageHeight as number,
       noEdit: (opts.edit as boolean) === false,
+      noTitle: (opts.title as boolean) === false,
     };
 
     const llmOpts: LLMOptions = {
@@ -98,12 +100,11 @@ program
       label: "Mindmap",
       run: async () => {
         mindmapResult = await runMindmap(options, llmOpts);
+        const nodeCount = mindmapResult.tree ? countNodes(mindmapResult.tree) : 0;
         console.log(
           chalk.green(
-            `  Tree: ${mindmapResult.tree.label} (${
-              countNodes(mindmapResult.tree)
-            } nodes)`
-          )
+            `  Tree: ${mindmapResult.tree?.label ?? mindmapResult.input} (${nodeCount} nodes)`,
+          ),
         );
       },
     });
@@ -116,8 +117,8 @@ program
         storyResult = await runStory(options, llmOpts, mindmapResult);
         console.log(
           chalk.green(
-            `  "${storyResult.storyTitle}" — ${storyResult.targetSlides} slides`
-          )
+            `  "${storyResult.storyTitle}" — ${storyResult.targetSlides} slides`,
+          ),
         );
       },
     });
@@ -166,14 +167,11 @@ program
     });
 
     // Determine which stages to run
-    const fromIndex = options.from
-      ? stages.findIndex((s) => s.name === options.from)
-      : 0;
+    const fromIndex = options.from ? stages.findIndex((s) => s.name === options.from) : 0;
 
-    const inputLabel =
-      inputSource === "file" ? `${input} (file)` : `"${options.input}"`;
+    const inputLabel = inputSource === "file" ? `${input} (file)` : `"${options.input}"`;
     console.log(
-      chalk.bold(`\nInfographic Slides: ${inputLabel}\n`)
+      chalk.bold(`\nInfographic Slides: ${inputLabel}\n`),
     );
 
     for (let i = Math.max(0, fromIndex); i < stages.length; i++) {
@@ -190,8 +188,8 @@ program
 
     console.log(
       chalk.bold.green(
-        `\nDone! Slides saved to ${options.outputDir}/slides/\n`
-      )
+        `\nDone! Slides saved to ${options.outputDir}/slides/\n`,
+      ),
     );
   });
 

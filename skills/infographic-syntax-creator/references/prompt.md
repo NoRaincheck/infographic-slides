@@ -7,8 +7,10 @@
 - 本规范和示例即使主要使用中文书写，也不能据此把英文用户输入翻译成中文。
 - The language used in this prompt or in the examples must never override the user's input language.
 - 对所有面向读者的文案，优先跟随最新用户输入的主要语言，而不是跟随本文件的书写语言。
-- Example: if the user writes in English, output `title` / `desc` / `label` in English too, such as `Product Roadmap`, not `产品路线图`.
-- 示例：如果用户输入是中文，输出中的 `title` / `desc` / `label` 也必须保持中文，例如写 `产品路线图`，不要改成 `Product Roadmap`。
+- Example: if the user writes in English, output `title` / `desc` / `label` in English too, such as `Product Roadmap`,
+  not `产品路线图`.
+- 示例：如果用户输入是中文，输出中的 `title` / `desc` / `label` 也必须保持中文，例如写 `产品路线图`，不要改成
+  `Product Roadmap`。
 
 ## 目录
 
@@ -40,7 +42,8 @@
 
 ### AntV Infographic 语法
 
-AntV Infographic 语法是一种基于 YAML 的自定义 DSL，用于描述信息图渲染配置。它使用缩进表达结构，适合 AI 直接生成并流式输出。核心信息包括：
+AntV Infographic 语法是一种基于 YAML 的自定义 DSL，用于描述信息图渲染配置。它使用缩进表达结构，适合 AI
+直接生成并流式输出。核心信息包括：
 
 1. template：用模板表达信息结构。
 2. data：信息图数据，包含 `title`、`desc` 和主数据字段。
@@ -67,13 +70,17 @@ theme
 - 第一行必须是 `infographic <template-name>`。
 - 使用 `data` / `theme` 块。
 - 键值对写法是 `键 空格 值`；对象数组使用 `-` 作为条目前缀并进行换行。
-- `title`、`desc`、`label` 以及其他面向读者的文案，默认保持与用户输入语言一致；除非用户明确要求，否则不要擅自翻译成另一种语言。
+- `title`、`desc`、`label`
+  以及其他面向读者的文案，默认保持与用户输入语言一致；除非用户明确要求，否则不要擅自翻译成另一种语言。
 - 如果用户输入混合多种语言，优先保持原始专有名词、产品名和缩写不变，并让补全文案跟随主要输入语言。
 - `icon` 可以使用精确图标 ID，例如 `mingcute/server-line`，也可以使用语义关键词短语，例如 `star fill`。
 - 如果使用语义关键词短语，多个关键词之间使用空格分隔，不要使用短横线；例如写 `rocket launch`，不要写 `rocket-launch`。
-- 对 `lists`、`sequences`、`nodes`、`items` 以及 `compares`/`children` 下的语义型数据项，默认应补充 `icon`；不要因为字段是可选就省略。
-- 如果模板名或视觉样式明显依赖图标（例如名称里包含 `icon`，或该模板本身就是图标型卡片/节点），则每个主要数据项都应包含 `icon`。
-- 如果不确定精确图标 ID，也要优先写一个简洁的语义关键词，例如 `rocket`、`shield`、`database`、`users`、`chart line`，而不是省略 `icon` 字段。
+- 对 `lists`、`sequences`、`nodes`、`items` 以及 `compares`/`children` 下的语义型数据项，默认应补充
+  `icon`；不要因为字段是可选就省略。
+- 如果模板名或视觉样式明显依赖图标（例如名称里包含 `icon`，或该模板本身就是图标型卡片/节点），则每个主要数据项都应包含
+  `icon`。
+- 如果不确定精确图标 ID，也要优先写一个简洁的语义关键词，例如
+  `rocket`、`shield`、`database`、`users`、`chart line`，而不是省略 `icon` 字段。
 - 仅在纯图表类数据点、纯数值序列，或用户明确要求极简文本版时，才可以省略 `icon`。
 - `value` 尽量使用纯数值；数值单位优先放在 `label` 或 `desc` 中表达。
 - `palette` 推荐使用行内简单数组写法，例如 `palette #4f46e5 #06b6d4 #10b981`。

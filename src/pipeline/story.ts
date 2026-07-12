@@ -1,11 +1,7 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import chalk from "chalk";
-import type {
-  MindmapArtifact,
-  StoryArtifact,
-  PipelineOptions,
-} from "../utils/types.js";
+import type { MindmapArtifact, PipelineOptions, StoryArtifact } from "../utils/types.js";
 import { artifactPaths } from "../utils/types.js";
 import { chatJson, type LLMOptions } from "../llm.js";
 import { STORY_SYSTEM, storyUser } from "../prompts/story.js";
@@ -13,7 +9,7 @@ import { STORY_SYSTEM, storyUser } from "../prompts/story.js";
 export async function runStory(
   opts: PipelineOptions,
   llmOpts: LLMOptions,
-  mindmap: MindmapArtifact
+  mindmap: MindmapArtifact,
 ): Promise<StoryArtifact> {
   const paths = artifactPaths(opts.outputDir);
 
@@ -46,7 +42,19 @@ export async function runStory(
   const artifact = await chatJson<StoryArtifact>(
     llmOpts,
     STORY_SYSTEM,
-    storyUser(mindmap.tree, opts.slides, opts.inputSource, opts.input)
+    storyUser(mindmap.tree, opts.slides, opts.inputSource, opts.input),
+    {
+      validate: (val) => {
+        const obj = val as Record<string, unknown>;
+        if (typeof obj.storyTitle !== "string") throw new Error("missing storyTitle");
+        if (!Array.isArray(obj.slides)) throw new Error("missing slides array");
+        for (const s of obj.slides) {
+          const slide = s as Record<string, unknown>;
+          if (typeof slide.title !== "string") throw new Error("slide missing title");
+          if (!Array.isArray(slide.keyPoints)) throw new Error("slide missing keyPoints");
+        }
+      },
+    },
   );
 
   mkdirSync(dirname(paths.story), { recursive: true });

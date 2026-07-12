@@ -29,14 +29,15 @@ export function storyUser(
   tree: MindmapNode,
   slideCount?: number,
   inputSource?: "text" | "file",
-  rawInput?: string
+  rawInput?: string,
 ): string {
   const hint = slideCount
     ? `The user wants approximately ${slideCount} slides.`
     : "Choose an appropriate number of slides (5-12).";
   let msg = `Here is the mindmap:\n${JSON.stringify(tree, null, 2)}\n\n${hint}\nPlan the story.`;
   if (inputSource === "file" && rawInput) {
-    msg = `The user provided structured content for this presentation. Use it as the primary source, respecting their structure and instructions where they exist.
+    msg =
+      `The user provided structured content for this presentation. Use it as the primary source, respecting their structure and instructions where they exist.
 
 Original content:
 ${rawInput}
