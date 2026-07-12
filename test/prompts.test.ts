@@ -4,7 +4,9 @@ import { MINDMAP_SYSTEM, mindmapUser } from "../src/prompts/mindmap.js";
 import { STORY_SYSTEM, storyUser } from "../src/prompts/story.js";
 import { ILLUSTRATION_SYSTEM, illustrationUser } from "../src/prompts/illustration.js";
 import { slideDesignSystem, slideDesignUser } from "../src/prompts/slide-design.js";
+import { THEME_SELECTION_SYSTEM, themeSelectionUser } from "../src/prompts/theme-selection.js";
 import type { SlideDesignArtifact } from "../src/utils/types.js";
+import type { Theme } from "../src/themes/types.js";
 
 describe("mindmap prompts", () => {
   it("MINDMAP_SYSTEM includes output format", () => {
@@ -118,6 +120,49 @@ describe("slide design prompts", () => {
     assert.ok(sys.length > 500, "System prompt should be substantial with skill content");
   });
 
+  it("slideDesignSystem includes theme info when theme is provided", () => {
+    const theme: Theme = {
+      slug: "test-theme",
+      name: "Test Theme",
+      description: "A test theme",
+      palette: ["#ff0000", "#00ff00"],
+      fontFamily: "'Test Font', sans-serif",
+      css: { background: "#fff", textColor: "#000", fontImports: "", bodyFontFamily: "sans-serif" },
+      preferredLayouts: ["list-row-horizontal-icon-arrow"],
+      avoidLayouts: ["chart-line-horizontal"],
+      layoutHints: "Test layout hints",
+      mood: ["test"],
+      formality: "medium",
+      scheme: "light",
+    };
+    const sys = slideDesignSystem(theme);
+    assert.ok(sys.includes("Test Theme"));
+    assert.ok(sys.includes("#ff0000 #00ff00"));
+    assert.ok(sys.includes("'Test Font', sans-serif"));
+    assert.ok(sys.includes("Test layout hints"));
+    assert.ok(sys.includes("list-row-horizontal-icon-arrow"));
+    assert.ok(sys.includes("chart-line-horizontal"));
+  });
+
+  it("slideDesignSystem omits theme block for vanilla", () => {
+    const vanilla: Theme = {
+      slug: "vanilla",
+      name: "Vanilla",
+      description: "Default",
+      palette: ["#3b82f6"],
+      fontFamily: "sans-serif",
+      css: { background: "#fff", textColor: "#000", fontImports: "", bodyFontFamily: "sans-serif" },
+      preferredLayouts: [],
+      avoidLayouts: [],
+      layoutHints: "",
+      mood: [],
+      formality: "medium",
+      scheme: "light",
+    };
+    const sys = slideDesignSystem(vanilla);
+    assert.ok(!sys.includes("THEME:"));
+  });
+
   it("slideDesignUser includes slides as JSON", () => {
     const slides = [
       { title: "Intro", description: "An intro", keyPoints: ["a", "b"] },
@@ -125,5 +170,23 @@ describe("slide design prompts", () => {
     const msg = slideDesignUser(slides);
     assert.ok(msg.includes("Intro"));
     assert.ok(msg.includes("Generate infographic syntax"));
+  });
+});
+
+describe("theme selection prompts", () => {
+  it("THEME_SELECTION_SYSTEM includes output format", () => {
+    assert.ok(THEME_SELECTION_SYSTEM.includes('"theme"'));
+    assert.ok(THEME_SELECTION_SYSTEM.includes('"reason"'));
+  });
+
+  it("THEME_SELECTION_SYSTEM includes available themes", () => {
+    assert.ok(THEME_SELECTION_SYSTEM.includes("vanilla"));
+    assert.ok(THEME_SELECTION_SYSTEM.includes("blue-professional"));
+  });
+
+  it("themeSelectionUser includes the input topic", () => {
+    const msg = themeSelectionUser("quantum computing");
+    assert.ok(msg.includes("quantum computing"));
+    assert.ok(msg.includes("Pick the best theme"));
   });
 });

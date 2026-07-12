@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import chalk from "chalk";
 import type { PipelineOptions, SlideDesignArtifact, StoryArtifact } from "../utils/types.js";
+import type { Theme } from "../themes/types.js";
 import { artifactPaths } from "../utils/types.js";
 import { chatJson, type LLMOptions } from "../llm.js";
 import { slideDesignSystem, slideDesignUser } from "../prompts/slide-design.js";
@@ -10,6 +11,7 @@ export async function runSlideDesign(
   opts: PipelineOptions,
   llmOpts: LLMOptions,
   story: StoryArtifact,
+  theme?: Theme,
 ): Promise<SlideDesignArtifact[]> {
   const paths = artifactPaths(opts.outputDir);
 
@@ -24,6 +26,7 @@ export async function runSlideDesign(
 
   if (opts.skip.includes("slides")) {
     console.log(chalk.yellow("  Skipped — generating minimal slide designs"));
+    const palette = theme && theme.slug !== "vanilla" ? theme.palette.join(" ") : "#3b82f6 #8b5cf6 #f97316";
     const artifacts: SlideDesignArtifact[] = story.slides.map((s, i) => ({
       slideIndex: i,
       title: s.title,
@@ -35,7 +38,7 @@ export async function runSlideDesign(
         "  lists",
         ...s.keyPoints.map((kp) => `    - label ${kp}\n      icon star`),
         "theme",
-        "  palette #3b82f6 #8b5cf6 #f97316",
+        `  palette ${palette}`,
       ].join("\n"),
     }));
     mkdirSync(dirname(paths.slideDesign), { recursive: true });
@@ -46,7 +49,7 @@ export async function runSlideDesign(
   console.log(chalk.cyan("  Calling LLM..."));
   const artifacts = await chatJson<SlideDesignArtifact[]>(
     llmOpts,
-    slideDesignSystem(),
+    slideDesignSystem(theme),
     slideDesignUser(story.slides),
     {
       validate: (val) => {

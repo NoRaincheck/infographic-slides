@@ -8,6 +8,7 @@ import { runStory } from "../src/pipeline/story.js";
 import { runSlideDesign } from "../src/pipeline/slide-design.js";
 import { runIllustrations } from "../src/pipeline/illustration.js";
 import { artifactPaths, type LLMOptions, type PipelineOptions } from "../src/utils/types.js";
+import type { Theme } from "../src/themes/types.js";
 
 function tmpDir(): string {
   return join(tmpdir(), `test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -212,6 +213,51 @@ describe("runSlideDesign", () => {
     const result = await runSlideDesign(baseOpts(dir), llmOpts, story);
 
     assert.equal(result[0].template, "chart-bar-plain-text");
+  });
+
+  it("uses theme palette in skip fallback when theme is provided", async () => {
+    const opts = { ...baseOpts(dir), skip: ["slides"] };
+    const story = {
+      storyTitle: "Test",
+      targetSlides: 1,
+      slides: [
+        { title: "Slide One", description: "First", keyPoints: ["a"] },
+      ],
+    };
+    const theme: Theme = {
+      slug: "test",
+      name: "Test",
+      description: "Test theme",
+      palette: ["#ff0000", "#00ff00", "#0000ff"],
+      fontFamily: "sans-serif",
+      css: { background: "#fff", textColor: "#000", fontImports: "", bodyFontFamily: "sans-serif" },
+      preferredLayouts: [],
+      avoidLayouts: [],
+      layoutHints: "",
+      mood: [],
+      formality: "medium",
+      scheme: "light",
+    };
+
+    const result = await runSlideDesign(opts, llmOpts, story, theme);
+
+    assert.ok(result[0].syntax.includes("#ff0000 #00ff00 #0000ff"), "Should use theme palette in syntax");
+    assert.ok(!result[0].syntax.includes("#3b82f6 #8b5cf6 #f97316"), "Should not use default palette");
+  });
+
+  it("falls back to default palette in skip fallback when no theme", async () => {
+    const opts = { ...baseOpts(dir), skip: ["slides"] };
+    const story = {
+      storyTitle: "Test",
+      targetSlides: 1,
+      slides: [
+        { title: "Slide One", description: "First", keyPoints: ["a"] },
+      ],
+    };
+
+    const result = await runSlideDesign(opts, llmOpts, story);
+
+    assert.ok(result[0].syntax.includes("#3b82f6 #8b5cf6 #f97316"), "Should use default palette");
   });
 });
 

@@ -1,11 +1,24 @@
 import type { StorySlide } from "../utils/types.js";
+import type { Theme } from "../themes/types.js";
 import { SKILLS } from "../llm.js";
 
-export function slideDesignSystem(): string {
+export function slideDesignSystem(theme?: Theme): string {
   const syntaxSkill = SKILLS.infographicSyntaxCreator();
   const syntaxRef = SKILLS.infographicSyntaxPrompt();
+
+  const themeBlock =
+    theme && theme.slug !== "vanilla"
+      ? `\nTHEME: "${theme.name}" (${theme.description})
+Use this palette for every slide's theme block: ${theme.palette.join(" ")}
+Use this font-family in the theme block: ${theme.fontFamily}
+${theme.layoutHints}
+Preferred AntV templates: ${theme.preferredLayouts.length > 0 ? theme.preferredLayouts.join(", ") : "any appropriate template"}
+Templates to avoid: ${theme.avoidLayouts.length > 0 ? theme.avoidLayouts.join(", ") : "none"}`
+      : "";
+
   return `You are an expert at generating AntV Infographic syntax.
 For each slide, choose the best template and produce valid infographic DSL.
+${themeBlock}
 
 ${syntaxSkill}
 
@@ -17,7 +30,7 @@ IMPORTANT RULES:
 - The syntax field must be complete, valid AntV Infographic syntax
 - Preserve the user's language in all text fields
 - Use semantic icon keywords (e.g. "rocket", "shield check", "chart line")
-- Include a palette in the theme block for each slide
+- Include a palette in the theme block for each slide${theme ? ` using the theme colors: ${theme.palette.join(" ")}` : ""}
 
 Output format:
 [

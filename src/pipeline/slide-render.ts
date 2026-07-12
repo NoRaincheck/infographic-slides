@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync as readBinary, writeFileSync } from
 import { dirname, join } from "node:path";
 import chalk from "chalk";
 import type { IllustrationDecision, PipelineOptions, RenderedSlide, SlideDesignArtifact } from "../utils/types.js";
+import type { Theme } from "../themes/types.js";
 import { artifactPaths } from "../utils/types.js";
 import { generateImage } from "../utils/image-gen.js";
 import { renderSyntaxToPng } from "../utils/render.js";
@@ -10,6 +11,7 @@ export async function runRender(
   opts: PipelineOptions,
   slides: SlideDesignArtifact[],
   illustrations: IllustrationDecision[],
+  theme?: Theme,
 ): Promise<RenderedSlide[]> {
   const paths = artifactPaths(opts.outputDir);
   const slidesDir = join(opts.outputDir, "slides");
@@ -96,6 +98,8 @@ export async function runRender(
         outputPath: pngPath,
         width: opts.imageWidth,
         height: opts.imageHeight,
+        theme,
+        htmlText: opts.htmlText,
       });
 
       results.push({

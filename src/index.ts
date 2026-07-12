@@ -6,12 +6,14 @@ import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import type { PipelineOptions, StageName } from "./utils/types.js";
 import { STAGE_NAMES } from "./utils/types.js";
 import type { LLMOptions } from "./llm.js";
+import type { Theme } from "./themes/types.js";
 import { runMindmap } from "./pipeline/mindmap.js";
 import { runStory } from "./pipeline/story.js";
 import { runSlideDesign } from "./pipeline/slide-design.js";
 import { runIllustrations } from "./pipeline/illustration.js";
 import { runRender } from "./pipeline/slide-render.js";
 import { runExport } from "./pipeline/export.js";
+import { runThemeSelection } from "./pipeline/theme-select.js";
 
 function parseList(val: string): string[] {
   return val
@@ -48,6 +50,8 @@ program
   .option("--image-height <px>", "Slide image height", (v) => Number.parseInt(v, 10), 1080)
   .option("--no-edit", "Disable post-processing image edits")
   .option("--no-title", "Strip title text from rendered slides")
+  .option("-t, --theme <slug>", "Theme slug, or 'auto' for automatic selection", "auto")
+  .option("--html-text", "Render text as HTML overlay instead of SVG foreignObject", false)
   .action(async (input: string, opts: Record<string, unknown>) => {
     let inputText: string;
     let inputSource: "text" | "file";
@@ -80,6 +84,8 @@ program
       imageHeight: opts.imageHeight as number,
       noEdit: (opts.edit as boolean) === false,
       noTitle: (opts.title as boolean) === false,
+      theme: opts.theme as string,
+      htmlText: opts.htmlText as boolean,
     };
 
     const llmOpts: LLMOptions = {
@@ -90,6 +96,7 @@ program
     mkdirSync(options.outputDir, { recursive: true });
 
     const stages: { name: StageName; label: string; run: () => Promise<void> }[] = [];
+    let themeResult: Theme | undefined;
     let mindmapResult: Awaited<ReturnType<typeof runMindmap>> | undefined;
     let storyResult: Awaited<ReturnType<typeof runStory>> | undefined;
     let slidesResult: Awaited<ReturnType<typeof runSlideDesign>> | undefined;
@@ -128,7 +135,7 @@ program
       label: "Slide Design",
       run: async () => {
         if (!storyResult) throw new Error("Story must run first");
-        slidesResult = await runSlideDesign(options, llmOpts, storyResult);
+        slidesResult = await runSlideDesign(options, llmOpts, storyResult, themeResult);
         console.log(chalk.green(`  ${slidesResult.length} slides designed`));
       },
     });
@@ -150,7 +157,7 @@ program
       run: async () => {
         if (!slidesResult) throw new Error("Slide design must run first");
         if (!illusResult) throw new Error("Illustrations must run first");
-        const rendered = await runRender(options, slidesResult, illusResult);
+        const rendered = await runRender(options, slidesResult, illusResult, themeResult);
         const ok = rendered.filter((r) => r.status === "ok").length;
         const fail = rendered.filter((r) => r.status === "error").length;
         console.log(chalk.green(`  ${ok} rendered, ${fail} failed`));
@@ -173,6 +180,17 @@ program
     console.log(
       chalk.bold(`\nInfographic Slides: ${inputLabel}\n`),
     );
+
+    // Theme selection (pre-step, runs before all stages)
+    if (fromIndex === 0) {
+      console.log(chalk.bold("[1/theme] Theme"));
+      try {
+        themeResult = await runThemeSelection(options, llmOpts);
+      } catch (err) {
+        console.log(chalk.red(`  Failed: ${(err as Error).message}`));
+        process.exit(1);
+      }
+    }
 
     for (let i = Math.max(0, fromIndex); i < stages.length; i++) {
       const stage = stages[i];
