@@ -41,6 +41,7 @@ IMPORTANT RULES:
 - Preserve the user's language in all text fields
 - Use semantic icon keywords (e.g. "rocket", "shield check", "chart line")
 - Include a palette in the theme block for each slide${theme ? ` using the theme colors: ${theme.palette.join(" ")}` : ""}
+- Use a variety of template types across slides — do NOT reuse the same template for every slide. Pick the template that best fits each slide's content structure.
 
 Output format:
 [

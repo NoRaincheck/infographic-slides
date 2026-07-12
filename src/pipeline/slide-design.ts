@@ -63,6 +63,10 @@ export async function runSlideDesign(
           if (typeof slide.template !== "string") throw new Error("slide missing template");
           if (typeof slide.syntax !== "string") throw new Error("slide missing syntax");
         }
+        const templates = (val as SlideDesignArtifact[]).map((s) => s.template);
+        if (templates.length > 1 && new Set(templates).size === 1) {
+          throw new Error(`all slides use the same template "${templates[0]}" — use a variety of templates`);
+        }
       },
     },
   );
